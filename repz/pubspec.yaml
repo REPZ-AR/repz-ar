@@ -30,6 +30,13 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  camera: ^0.11.0
+  google_mlkit_pose_detection:
+    path: ../repz/lib/packages/google_mlkit_pose_detection
+  image_picker: ^1.2.0
+  path: ^1.9.1
+  path_provider: ^2.1.5
+  google_mlkit_commons: any
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
