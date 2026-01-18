@@ -34,6 +34,11 @@ class PosePainter extends CustomPainter {
       ..strokeWidth = 3.0
       ..color = Colors.blueAccent;
 
+    final bodyPaint = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 3.0
+    ..color = Colors.red;
+
     for (final pose in poses) {
       pose.landmarks.forEach((_, landmark) {
         canvas.drawCircle(
@@ -53,7 +58,7 @@ class PosePainter extends CustomPainter {
                 cameraLensDirection,
               ),
             ),
-            1,
+            6,
             paint);
       });
 
@@ -111,6 +116,11 @@ class PosePainter extends CustomPainter {
       paintLine(PoseLandmarkType.rightShoulder, PoseLandmarkType.rightHip,
           rightPaint);
 
+      paintLine(PoseLandmarkType.leftShoulder, PoseLandmarkType.rightShoulder,
+          bodyPaint);
+      paintLine(PoseLandmarkType.leftHip, PoseLandmarkType.rightHip,
+          bodyPaint);
+
       //Draw legs
       paintLine(PoseLandmarkType.leftHip, PoseLandmarkType.leftKnee, leftPaint);
       paintLine(
@@ -119,6 +129,21 @@ class PosePainter extends CustomPainter {
           PoseLandmarkType.rightHip, PoseLandmarkType.rightKnee, rightPaint);
       paintLine(
           PoseLandmarkType.rightKnee, PoseLandmarkType.rightAnkle, rightPaint);
+
+      //Draw hands
+      paintLine(PoseLandmarkType.leftWrist, PoseLandmarkType.leftIndex,
+          leftPaint);
+      paintLine(PoseLandmarkType.leftWrist, PoseLandmarkType.leftPinky,
+          leftPaint);
+      paintLine(PoseLandmarkType.leftWrist, PoseLandmarkType.leftThumb,
+          leftPaint);
+
+      paintLine(PoseLandmarkType.rightWrist, PoseLandmarkType.rightIndex,
+          rightPaint);
+      paintLine(PoseLandmarkType.rightWrist, PoseLandmarkType.rightPinky,
+          rightPaint);
+      paintLine(PoseLandmarkType.rightWrist, PoseLandmarkType.rightThumb,
+          rightPaint);
     }
   }
 
