@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:repz/views/object_detector_view.dart';
 import 'package:repz/views/pose_detector_view.dart';
 
 Future<void> main() async {
@@ -36,6 +37,7 @@ class Home extends StatelessWidget {
               child: Column(
                 children: [
                   CustomCard('Pose Detection', PoseDetectorView()),
+                  CustomCard('Object Detection', ObjectDetectorView()),
                   SizedBox(
                     height: 20,
                   )
