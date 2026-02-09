@@ -14,7 +14,7 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
 
   @override
   Widget build(BuildContext context) {
-
+    // Theme colors matching HomePage
     final accentColor = widget.isDarkMode ? const Color(0xFFCFF500) : const Color(0xFFA66CFF);
     final backgroundColor = widget.isDarkMode ? const Color(0xFF121212) : Colors.white;
     final cardColor = widget.isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
@@ -22,12 +22,12 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
     final secondaryTextColor = widget.isDarkMode ? Colors.grey[400] : Colors.grey[600];
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: backgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: backgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: Icon(Icons.arrow_back, color: textColor),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -35,14 +35,14 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Title
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Text(
               'Meet Your Clients',
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
-                color: Colors.black,
+                color: textColor,
               ),
             ),
           ),
@@ -63,8 +63,14 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
-                        color: isOnlineClients ? const Color(0xFFE8D5FF) : Colors.transparent,
+                        color: isOnlineClients
+                            ? accentColor.withOpacity(0.2)
+                            : Colors.transparent,
                         borderRadius: BorderRadius.circular(25),
+                        border: Border.all(
+                          color: isOnlineClients ? accentColor : Colors.grey.withOpacity(0.3),
+                          width: 1.5,
+                        ),
                       ),
                       child: Center(
                         child: Text(
@@ -72,7 +78,7 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: isOnlineClients ? const Color(0xFF7B2CBF) : Colors.grey,
+                            color: isOnlineClients ? accentColor : secondaryTextColor,
                           ),
                         ),
                       ),
@@ -90,8 +96,14 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
-                        color: !isOnlineClients ? const Color(0xFFE8D5FF) : Colors.transparent,
+                        color: !isOnlineClients
+                            ? accentColor.withOpacity(0.2)
+                            : Colors.transparent,
                         borderRadius: BorderRadius.circular(25),
+                        border: Border.all(
+                          color: !isOnlineClients ? accentColor : Colors.grey.withOpacity(0.3),
+                          width: 1.5,
+                        ),
                       ),
                       child: Center(
                         child: Text(
@@ -99,7 +111,7 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: !isOnlineClients ? const Color(0xFF7B2CBF) : Colors.grey,
+                            color: !isOnlineClients ? accentColor : secondaryTextColor,
                           ),
                         ),
                       ),
@@ -116,21 +128,29 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               children: [
-                // First Client - Adam Park (with highlight)
+                // First Client - Adam Park
                 _buildClientCard(
                   name: 'Adam Park',
                   time: '00 mins',
                   isHighlighted: false,
                   avatarColor: Colors.orange,
+                  cardColor: cardColor,
+                  textColor: textColor,
+                  secondaryTextColor: secondaryTextColor,
+                  accentColor: accentColor,
                 ),
                 const SizedBox(height: 12),
 
-                // Second Client - Highlighted in purple
+                // Second Client - Highlighted
                 _buildClientCard(
                   name: 'Type Here',
                   time: '00 mins',
                   isHighlighted: true,
                   avatarColor: Colors.green,
+                  cardColor: cardColor,
+                  textColor: textColor,
+                  secondaryTextColor: secondaryTextColor,
+                  accentColor: accentColor,
                 ),
                 const SizedBox(height: 12),
 
@@ -140,6 +160,10 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
                   time: '00 mins',
                   isHighlighted: false,
                   avatarColor: Colors.pink,
+                  cardColor: cardColor,
+                  textColor: textColor,
+                  secondaryTextColor: secondaryTextColor,
+                  accentColor: accentColor,
                 ),
                 const SizedBox(height: 12),
 
@@ -148,6 +172,10 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
                   time: '00 mins',
                   isHighlighted: false,
                   avatarColor: Colors.blue,
+                  cardColor: cardColor,
+                  textColor: textColor,
+                  secondaryTextColor: secondaryTextColor,
+                  accentColor: accentColor,
                 ),
                 const SizedBox(height: 12),
 
@@ -156,13 +184,21 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
                   time: '00 mins',
                   isHighlighted: false,
                   avatarColor: Colors.purple,
+                  cardColor: cardColor,
+                  textColor: textColor,
+                  secondaryTextColor: secondaryTextColor,
+                  accentColor: accentColor,
                 ),
               ],
             ),
           ),
         ],
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
+      bottomNavigationBar: _buildBottomNavigationBar(
+        accentColor: accentColor,
+        backgroundColor: backgroundColor,
+        textColor: textColor,
+      ),
     );
   }
 
@@ -171,15 +207,25 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
     required String time,
     required bool isHighlighted,
     required Color avatarColor,
+    required Color cardColor,
+    required Color textColor,
+    required Color? secondaryTextColor,
+    required Color accentColor,
   }) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isHighlighted ? const Color(0xFFB565F5) : Colors.white,
+        color: isHighlighted ? accentColor : cardColor,
         borderRadius: BorderRadius.circular(15),
+        border: isHighlighted
+            ? null
+            : Border.all(
+          color: Colors.grey.withOpacity(0.2),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.black.withOpacity(0.05),
             spreadRadius: 1,
             blurRadius: 5,
             offset: const Offset(0, 2),
@@ -206,7 +252,7 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: isHighlighted ? Colors.white : Colors.black,
+                    color: isHighlighted ? Colors.black : textColor,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -214,7 +260,9 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
                   time,
                   style: TextStyle(
                     fontSize: 12,
-                    color: isHighlighted ? Colors.white.withOpacity(0.8) : Colors.grey,
+                    color: isHighlighted
+                        ? Colors.black.withOpacity(0.6)
+                        : secondaryTextColor,
                   ),
                 ),
               ],
@@ -225,12 +273,14 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: isHighlighted ? Colors.white : const Color(0xFF4A4A4A),
+              color: isHighlighted
+                  ? Colors.black
+                  : (widget.isDarkMode ? Colors.grey[700] : const Color(0xFF4A4A4A)),
               shape: BoxShape.circle,
             ),
             child: Icon(
               isHighlighted ? Icons.pause : Icons.arrow_forward_ios,
-              color: isHighlighted ? const Color(0xFFB565F5) : Colors.white,
+              color: isHighlighted ? accentColor : Colors.white,
               size: 16,
             ),
           ),
@@ -239,13 +289,17 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
     );
   }
 
-  Widget _buildBottomNavigationBar() {
+  Widget _buildBottomNavigationBar({
+    required Color accentColor,
+    required Color backgroundColor,
+    required Color textColor,
+  }) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: backgroundColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
+            color: Colors.black.withOpacity(0.1),
             spreadRadius: 1,
             blurRadius: 10,
           ),
@@ -253,8 +307,8 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
       ),
       child: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: const Color(0xFF7B2CBF),
+        backgroundColor: backgroundColor,
+        selectedItemColor: accentColor,
         unselectedItemColor: Colors.grey,
         currentIndex: 2,
         elevation: 0,
