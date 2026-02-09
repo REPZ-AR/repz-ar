@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:repz/views/utils/user_avatar.dart';
 
 class HomePage extends StatelessWidget {
   final bool isDarkMode;
@@ -11,6 +13,9 @@ class HomePage extends StatelessWidget {
         isDarkMode ? const Color(0xFFCFF500) : const Color(0xFFA66CFF);
     final cardColor = isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
     final textColor = isDarkMode ? Colors.white : Colors.black;
+
+    final user = FirebaseAuth.instance.currentUser;
+    final photoUrl = user?.photoURL;
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -31,11 +36,19 @@ class HomePage extends StatelessWidget {
                 ),
                 CircleAvatar(
                   radius: 20,
-                  backgroundColor: accentColor,
-                  child: Icon(
-                    Icons.person,
-                    color: Colors.black,
-                  ),
+                  backgroundColor: accentColor.withValues(alpha: 0.25),
+                  foregroundImage: (photoUrl != null && photoUrl.isNotEmpty)
+                      ? NetworkImage(photoUrl)
+                      : null,
+                  child: user == null
+                      ? const Icon(Icons.person)
+                      : Text(
+                          UserAvatarUtils.initialsFor(user),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            color: isDarkMode ? Colors.white : Colors.black,
+                          ),
+                        ),
                 ),
               ],
             ),
