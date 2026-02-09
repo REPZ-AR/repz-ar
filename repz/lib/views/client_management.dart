@@ -194,11 +194,6 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
           ),
         ],
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(
-        accentColor: accentColor,
-        backgroundColor: backgroundColor,
-        textColor: textColor,
-      ),
     );
   }
 
@@ -283,55 +278,6 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
               color: isHighlighted ? accentColor : Colors.white,
               size: 16,
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBottomNavigationBar({
-    required Color accentColor,
-    required Color backgroundColor,
-    required Color textColor,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 10,
-          ),
-        ],
-      ),
-      child: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: backgroundColor,
-        selectedItemColor: accentColor,
-        unselectedItemColor: Colors.grey,
-        currentIndex: 2,
-        elevation: 0,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search),
-            label: 'Search',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.camera_alt_outlined),
-            label: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.video_library_outlined),
-            label: 'Library',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings_outlined),
-            label: 'Settings',
           ),
         ],
       ),

@@ -77,7 +77,7 @@ class _MainPageState extends State<MainPage> {
   void _buildPages() {
     _pages = [
       HomePage(isDarkMode: widget.isDarkMode),
-      const ClientManagementPage(),
+      ClientManagementPage(isDarkMode: widget.isDarkMode),
       const ActivityPage(),
       const LibraryPage(),
       MenuPage(
