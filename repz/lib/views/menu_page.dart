@@ -39,7 +39,11 @@ class MenuPage extends StatelessWidget {
                   Switch(
                     value: isDarkMode,
                     onChanged: onThemeChanged,
-                    activeThumbColor: accentColor,
+                    thumbColor: WidgetStateProperty.resolveWith<Color?>(
+                      (states) => states.contains(WidgetState.selected)
+                          ? accentColor
+                          : null,
+                    ),
                   ),
                 ],
               ),
@@ -50,5 +54,4 @@ class MenuPage extends StatelessWidget {
     );
   }
 }
-
 

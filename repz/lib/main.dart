@@ -1,11 +1,17 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:repz/services/google_auth_service.dart';
 import 'package:repz/views/home_page.dart';
+import 'package:repz/views/login_page.dart';
 import 'package:repz/views/search_page.dart';
 import 'package:repz/views/activity_page.dart';
 import 'package:repz/views/library_page.dart';
 import 'package:repz/views/menu_page.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   runApp(const MyApp());
 }
 
@@ -34,9 +40,10 @@ class _MyAppState extends State<MyApp> {
         primaryColor: const Color(0xFFCFF500),
         scaffoldBackgroundColor: const Color(0xFF121212),
         useMaterial3: true,
+        fontFamily: 'Inter',
       ),
       themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
-      home: MainPage(
+      home: _AuthGate(
         isDarkMode: isDarkMode,
         onThemeChanged: (bool value) {
           setState(() {
@@ -44,6 +51,67 @@ class _MyAppState extends State<MyApp> {
           });
         },
       ),
+    );
+  }
+}
+
+class _AuthGate extends StatelessWidget {
+  const _AuthGate({required this.isDarkMode, required this.onThemeChanged});
+
+  final bool isDarkMode;
+  final ValueChanged<bool> onThemeChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Scaffold(
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  'Authentication error: ${snapshot.error}',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+          );
+        }
+
+        final user = snapshot.data;
+        if (user != null) {
+          return MainPage(
+            isDarkMode: isDarkMode,
+            onThemeChanged: onThemeChanged,
+          );
+        }
+
+        return LoginPage(
+          onContinue: () async {
+            try {
+              final cred = await GoogleAuthService().signInWithGoogle();
+              if (cred == null && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Sign-in cancelled')),
+                );
+              }
+            } catch (e) {
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Google sign-in failed: $e')),
+              );
+            }
+          },
+        );
+      },
     );
   }
 }
