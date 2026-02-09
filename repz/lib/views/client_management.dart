@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 class ClientManagementPage extends StatefulWidget {
-  const ClientManagementPage({Key? key}) : super(key: key);
+  final bool isDarkMode;
+
+  const ClientManagementPage({Key? key, required this.isDarkMode}) : super(key: key);
 
   @override
   State<ClientManagementPage> createState() => _ClientManagementPageState();
@@ -12,6 +14,13 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
 
   @override
   Widget build(BuildContext context) {
+
+    final accentColor = widget.isDarkMode ? const Color(0xFFCFF500) : const Color(0xFFA66CFF);
+    final backgroundColor = widget.isDarkMode ? const Color(0xFF121212) : Colors.white;
+    final cardColor = widget.isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
+    final textColor = widget.isDarkMode ? Colors.white : Colors.black;
+    final secondaryTextColor = widget.isDarkMode ? Colors.grey[400] : Colors.grey[600];
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
