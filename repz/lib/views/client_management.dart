@@ -10,8 +10,6 @@ class ClientManagementPage extends StatefulWidget {
 }
 
 class _ClientManagementPageState extends State<ClientManagementPage> {
-  bool isOnlineClients = true;
-
   @override
   Widget build(BuildContext context) {
     // Theme colors matching HomePage
@@ -44,81 +42,6 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
                 fontWeight: FontWeight.bold,
                 color: textColor,
               ),
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Tab Buttons
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        isOnlineClients = true;
-                      });
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color: isOnlineClients
-                            ? accentColor.withOpacity(0.2)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(25),
-                        border: Border.all(
-                          color: isOnlineClients ? accentColor : Colors.grey.withOpacity(0.3),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          'Online Clients',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: isOnlineClients ? accentColor : secondaryTextColor,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 15),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        isOnlineClients = false;
-                      });
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color: !isOnlineClients
-                            ? accentColor.withOpacity(0.2)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(25),
-                        border: Border.all(
-                          color: !isOnlineClients ? accentColor : Colors.grey.withOpacity(0.3),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          'Gym Clients',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: !isOnlineClients ? accentColor : secondaryTextColor,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
             ),
           ),
           const SizedBox(height: 20),
@@ -193,7 +116,19 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
 
                 _buildClientCard(
                   name: 'Emma Wales',
-                  subtitle: 'Weight Loss Goal',
+                  subtitle: 'Endurance Goal',
+                  isHighlighted: false,
+                  avatarColor: Colors.purple,
+                  cardColor: cardColor,
+                  textColor: textColor,
+                  secondaryTextColor: secondaryTextColor,
+                  accentColor: accentColor,
+                ),
+                const SizedBox(height: 12),
+
+                _buildClientCard(
+                  name: 'John Will',
+                  subtitle: '6 Months',
                   isHighlighted: false,
                   avatarColor: Colors.purple,
                   cardColor: cardColor,
