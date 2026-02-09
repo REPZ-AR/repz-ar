@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:repz/views/client_management.dart';
 import 'package:repz/views/home_page.dart';
 import 'package:repz/views/search_page.dart';
 import 'package:repz/views/activity_page.dart';
@@ -76,7 +77,7 @@ class _MainPageState extends State<MainPage> {
   void _buildPages() {
     _pages = [
       HomePage(isDarkMode: widget.isDarkMode),
-      const SearchPage(),
+      const ClientManagementPage(),
       const ActivityPage(),
       const LibraryPage(),
       MenuPage(
