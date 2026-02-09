@@ -131,9 +131,9 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
                 // First Client - Adam Park
                 _buildClientCard(
                   name: 'Adam Park',
-                  time: '00 mins',
+                  subtitle: 'Active Plan',
                   isHighlighted: false,
-                  avatarColor: Colors.orange,
+                  avatarColor: Colors.purple,
                   cardColor: cardColor,
                   textColor: textColor,
                   secondaryTextColor: secondaryTextColor,
@@ -143,10 +143,10 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
 
                 // Second Client - Highlighted
                 _buildClientCard(
-                  name: 'Type Here',
-                  time: '00 mins',
+                  name: 'Sarah Johnson',
+                  subtitle: 'Premium Member',
                   isHighlighted: true,
-                  avatarColor: Colors.green,
+                  avatarColor: Colors.purple,
                   cardColor: cardColor,
                   textColor: textColor,
                   secondaryTextColor: secondaryTextColor,
@@ -156,10 +156,10 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
 
                 // Remaining Clients
                 _buildClientCard(
-                  name: 'Type Here',
-                  time: '00 mins',
+                  name: 'Mike Chen',
+                  subtitle: 'Beginner',
                   isHighlighted: false,
-                  avatarColor: Colors.pink,
+                  avatarColor: Colors.purple,
                   cardColor: cardColor,
                   textColor: textColor,
                   secondaryTextColor: secondaryTextColor,
@@ -168,10 +168,10 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
                 const SizedBox(height: 12),
 
                 _buildClientCard(
-                  name: 'Type Here',
-                  time: '00 mins',
+                  name: 'Emma Wilson',
+                  subtitle: '3 Months',
                   isHighlighted: false,
-                  avatarColor: Colors.blue,
+                  avatarColor: Colors.purple,
                   cardColor: cardColor,
                   textColor: textColor,
                   secondaryTextColor: secondaryTextColor,
@@ -180,8 +180,20 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
                 const SizedBox(height: 12),
 
                 _buildClientCard(
-                  name: 'Type Here',
-                  time: '00 mins',
+                  name: 'James Smith',
+                  subtitle: 'Weight Loss Goal',
+                  isHighlighted: false,
+                  avatarColor: Colors.purple,
+                  cardColor: cardColor,
+                  textColor: textColor,
+                  secondaryTextColor: secondaryTextColor,
+                  accentColor: accentColor,
+                ),
+                const SizedBox(height: 12),
+
+                _buildClientCard(
+                  name: 'Emma Wales',
+                  subtitle: 'Weight Loss Goal',
                   isHighlighted: false,
                   avatarColor: Colors.purple,
                   cardColor: cardColor,
@@ -199,7 +211,7 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
 
   Widget _buildClientCard({
     required String name,
-    required String time,
+    required String subtitle,
     required bool isHighlighted,
     required Color avatarColor,
     required Color cardColor,
@@ -237,7 +249,7 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
           ),
           const SizedBox(width: 12),
 
-          // Name and Time
+          // Name and Subtitle
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -252,7 +264,7 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  time,
+                  subtitle,
                   style: TextStyle(
                     fontSize: 12,
                     color: isHighlighted
@@ -264,7 +276,7 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
             ),
           ),
 
-          // Action Button
+          // Action Button - Always shows arrow
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
@@ -274,7 +286,7 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
               shape: BoxShape.circle,
             ),
             child: Icon(
-              isHighlighted ? Icons.pause : Icons.arrow_forward_ios,
+              Icons.arrow_forward_ios,
               color: isHighlighted ? accentColor : Colors.white,
               size: 16,
             ),
