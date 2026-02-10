@@ -52,7 +52,7 @@ class _TrainerManagementPageState extends State<TrainerManagementPage> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Text(
-              'Meet Your Clients',
+              'Meet Your Trainers',
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
