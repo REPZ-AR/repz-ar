@@ -15,11 +15,12 @@ class ClientManagementPage extends StatefulWidget {
 
 class _ClientManagementPageState extends State<ClientManagementPage> {
   bool isOnlineClients = true;
+  int? selectedClientIndex;
 
   // Sample data
   final List<Client> clients = const [
     Client(name: 'Adam Park', subtitle: 'Active Plan'),
-    Client(name: 'Sarah Johnson', subtitle: 'Premium Member', isHighlighted: true),
+    Client(name: 'Sarah Johnson', subtitle: 'Premium Member'),
     Client(name: 'Mike Chen', subtitle: 'Beginner'),
     Client(name: 'Emma Wilson', subtitle: '3 Months'),
     Client(name: 'James Smith', subtitle: 'Weight Loss Goal'),
@@ -85,9 +86,11 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
                   client: clients[index],
                   isDarkMode: widget.isDarkMode,
                   accentColor: accentColor,
+                  isHighlighted: selectedClientIndex == index,
                   onTap: () {
-                    // Handle client tap
-                    print('Tapped on ${clients[index].name}');
+                    setState(() {
+                      selectedClientIndex = index;
+                    });
                   },
                 );
               },

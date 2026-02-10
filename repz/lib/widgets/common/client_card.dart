@@ -5,6 +5,7 @@ class ClientCard extends StatelessWidget {
   final Client client;
   final bool isDarkMode;
   final Color accentColor;
+  final bool isHighlighted; // Add this parameter
   final VoidCallback? onTap;
 
   const ClientCard({
@@ -12,6 +13,7 @@ class ClientCard extends StatelessWidget {
     required this.client,
     required this.isDarkMode,
     required this.accentColor,
+    this.isHighlighted = false, // Default to false
     this.onTap,
   }) : super(key: key);
 
@@ -26,9 +28,9 @@ class ClientCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: client.isHighlighted ? accentColor : cardColor,
+          color: isHighlighted ? accentColor : cardColor, // Use parameter
           borderRadius: BorderRadius.circular(15),
-          border: client.isHighlighted
+          border: isHighlighted
               ? null
               : Border.all(
             color: Colors.grey.withOpacity(0.2),
@@ -70,7 +72,7 @@ class ClientCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: client.isHighlighted ? Colors.black : textColor,
+                      color: isHighlighted ? Colors.black : textColor,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -78,7 +80,7 @@ class ClientCard extends StatelessWidget {
                     client.subtitle,
                     style: TextStyle(
                       fontSize: 12,
-                      color: client.isHighlighted
+                      color: isHighlighted
                           ? Colors.black.withOpacity(0.6)
                           : secondaryTextColor,
                     ),
@@ -91,14 +93,14 @@ class ClientCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: client.isHighlighted
+                color: isHighlighted
                     ? Colors.black
                     : (isDarkMode ? Colors.grey[700] : const Color(0xFF4A4A4A)),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.arrow_forward_ios,
-                color: client.isHighlighted ? accentColor : Colors.white,
+                color: isHighlighted ? accentColor : Colors.white,
                 size: 16,
               ),
             ),
