@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import '../model/client.dart';
+import '../widgets/common/client_card.dart';
+import '../widgets/common/tab_selector.dart';
+import '../utils/theme_helper.dart';
 
 class ClientManagementPage extends StatefulWidget {
   final bool isDarkMode;
@@ -12,14 +16,22 @@ class ClientManagementPage extends StatefulWidget {
 class _ClientManagementPageState extends State<ClientManagementPage> {
   bool isOnlineClients = true;
 
+  // Sample data
+  final List<Client> clients = const [
+    Client(name: 'Adam Park', subtitle: 'Active Plan'),
+    Client(name: 'Sarah Johnson', subtitle: 'Premium Member', isHighlighted: true),
+    Client(name: 'Mike Chen', subtitle: 'Beginner'),
+    Client(name: 'Emma Wilson', subtitle: '3 Months'),
+    Client(name: 'James Smith', subtitle: 'Weight Loss Goal'),
+    Client(name: 'Emma Wales', subtitle: 'Weight Loss Goal'),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    // Theme colors matching HomePage
-    final accentColor = widget.isDarkMode ? const Color(0xFFCFF500) : const Color(0xFFA66CFF);
-    final backgroundColor = widget.isDarkMode ? const Color(0xFF121212) : Colors.white;
-    final cardColor = widget.isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
-    final textColor = widget.isDarkMode ? Colors.white : Colors.black;
-    final secondaryTextColor = widget.isDarkMode ? Colors.grey[400] : Colors.grey[600];
+    final accentColor = AppTheme.getAccentColor(widget.isDarkMode);
+    final backgroundColor = AppTheme.getBackgroundColor(widget.isDarkMode);
+    final textColor = AppTheme.getTextColor(widget.isDarkMode);
+    final secondaryTextColor = AppTheme.getSecondaryTextColor(widget.isDarkMode);
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -51,244 +63,34 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
           // Tab Buttons
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        isOnlineClients = true;
-                      });
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color: isOnlineClients
-                            ? accentColor.withOpacity(0.2)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(25),
-                        border: Border.all(
-                          color: isOnlineClients ? accentColor : Colors.grey.withOpacity(0.3),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          'Online Clients',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: isOnlineClients ? accentColor : secondaryTextColor,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 15),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        isOnlineClients = false;
-                      });
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color: !isOnlineClients
-                            ? accentColor.withOpacity(0.2)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(25),
-                        border: Border.all(
-                          color: !isOnlineClients ? accentColor : Colors.grey.withOpacity(0.3),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          'Gym Clients',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: !isOnlineClients ? accentColor : secondaryTextColor,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+            child: TabSelector(
+              isFirstTabSelected: isOnlineClients,
+              firstTabLabel: 'Online Clients',
+              secondTabLabel: 'Gym Clients',
+              onTabChanged: (value) => setState(() => isOnlineClients = value),
+              accentColor: accentColor,
+              secondaryTextColor: secondaryTextColor,
             ),
           ),
           const SizedBox(height: 20),
 
           // Client List
           Expanded(
-            child: ListView(
+            child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              children: [
-                // First Client - Adam Park
-                _buildClientCard(
-                  name: 'Adam Park',
-                  subtitle: 'Active Plan',
-                  isHighlighted: false,
-                  avatarColor: Colors.purple,
-                  cardColor: cardColor,
-                  textColor: textColor,
-                  secondaryTextColor: secondaryTextColor,
+              itemCount: clients.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                return ClientCard(
+                  client: clients[index],
+                  isDarkMode: widget.isDarkMode,
                   accentColor: accentColor,
-                ),
-                const SizedBox(height: 12),
-
-                // Second Client - Highlighted
-                _buildClientCard(
-                  name: 'Sarah Johnson',
-                  subtitle: 'Premium Member',
-                  isHighlighted: true,
-                  avatarColor: Colors.purple,
-                  cardColor: cardColor,
-                  textColor: textColor,
-                  secondaryTextColor: secondaryTextColor,
-                  accentColor: accentColor,
-                ),
-                const SizedBox(height: 12),
-
-                // Remaining Clients
-                _buildClientCard(
-                  name: 'Mike Chen',
-                  subtitle: 'Beginner',
-                  isHighlighted: false,
-                  avatarColor: Colors.purple,
-                  cardColor: cardColor,
-                  textColor: textColor,
-                  secondaryTextColor: secondaryTextColor,
-                  accentColor: accentColor,
-                ),
-                const SizedBox(height: 12),
-
-                _buildClientCard(
-                  name: 'Emma Wilson',
-                  subtitle: '3 Months',
-                  isHighlighted: false,
-                  avatarColor: Colors.purple,
-                  cardColor: cardColor,
-                  textColor: textColor,
-                  secondaryTextColor: secondaryTextColor,
-                  accentColor: accentColor,
-                ),
-                const SizedBox(height: 12),
-
-                _buildClientCard(
-                  name: 'James Smith',
-                  subtitle: 'Weight Loss Goal',
-                  isHighlighted: false,
-                  avatarColor: Colors.purple,
-                  cardColor: cardColor,
-                  textColor: textColor,
-                  secondaryTextColor: secondaryTextColor,
-                  accentColor: accentColor,
-                ),
-                const SizedBox(height: 12),
-
-                _buildClientCard(
-                  name: 'Emma Wales',
-                  subtitle: 'Weight Loss Goal',
-                  isHighlighted: false,
-                  avatarColor: Colors.purple,
-                  cardColor: cardColor,
-                  textColor: textColor,
-                  secondaryTextColor: secondaryTextColor,
-                  accentColor: accentColor,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildClientCard({
-    required String name,
-    required String subtitle,
-    required bool isHighlighted,
-    required Color avatarColor,
-    required Color cardColor,
-    required Color textColor,
-    required Color? secondaryTextColor,
-    required Color accentColor,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isHighlighted ? accentColor : cardColor,
-        borderRadius: BorderRadius.circular(15),
-        border: isHighlighted
-            ? null
-            : Border.all(
-          color: Colors.grey.withOpacity(0.2),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            spreadRadius: 1,
-            blurRadius: 5,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Avatar
-          CircleAvatar(
-            radius: 25,
-            backgroundColor: avatarColor.withOpacity(0.3),
-            child: const Icon(Icons.person, color: Colors.white, size: 30),
-          ),
-          const SizedBox(width: 12),
-
-          // Name and Subtitle
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: isHighlighted ? Colors.black : textColor,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isHighlighted
-                        ? Colors.black.withOpacity(0.6)
-                        : secondaryTextColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Action Button - Always shows arrow
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: isHighlighted
-                  ? Colors.black
-                  : (widget.isDarkMode ? Colors.grey[700] : const Color(0xFF4A4A4A)),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.arrow_forward_ios,
-              color: isHighlighted ? accentColor : Colors.white,
-              size: 16,
+                  onTap: () {
+                    // Handle client tap
+                    print('Tapped on ${clients[index].name}');
+                  },
+                );
+              },
             ),
           ),
         ],
