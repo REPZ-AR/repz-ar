@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:repz/tools/baseline_viewer.dart';
 import 'package:repz/views/object_detector_view.dart';
 import 'package:repz/views/pose_detector_view.dart';
 
@@ -37,6 +38,7 @@ class Home extends StatelessWidget {
               child: Column(
                 children: [
                   CustomCard('Pose Detection', PoseDetectorView()),
+                  CustomCard('Base Pose', BaselineInspector(assetPath: 'assets/data/baseline_curls.json')),
                   CustomCard('Object Detection', ObjectDetectorView()),
                   SizedBox(
                     height: 20,

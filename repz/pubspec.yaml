@@ -65,7 +65,7 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/data/baseline_curls.json
+    - ./assets/data/baseline_curls.json
 
   # To add assets to your application, add an assets section, like this:
   # assets:
