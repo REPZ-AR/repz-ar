@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:repz/views/client_management.dart';
+import 'package:repz/views/trainer_management.dart';
 import 'package:repz/views/home_page.dart';
 import 'package:repz/views/search_page.dart';
 import 'package:repz/views/activity_page.dart';
@@ -19,6 +20,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   bool isDarkMode = true;
+  bool isCoach = true;
 
   @override
   Widget build(BuildContext context) {
@@ -39,6 +41,7 @@ class _MyAppState extends State<MyApp> {
       themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
       home: MainPage(
         isDarkMode: isDarkMode,
+        isCoach: isCoach,
         onThemeChanged: (bool value) {
           setState(() {
             isDarkMode = value;
@@ -51,11 +54,13 @@ class _MyAppState extends State<MyApp> {
 
 class MainPage extends StatefulWidget {
   final bool isDarkMode;
+  final bool isCoach;
   final Function(bool) onThemeChanged;
 
   const MainPage({
     Key? key,
     required this.isDarkMode,
+    required this.isCoach,
     required this.onThemeChanged,
   }) : super(key: key);
 
@@ -77,7 +82,9 @@ class _MainPageState extends State<MainPage> {
   void _buildPages() {
     _pages = [
       HomePage(isDarkMode: widget.isDarkMode),
-      ClientManagementPage(isDarkMode: widget.isDarkMode),
+      widget.isCoach
+          ? ClientManagementPage(isDarkMode: widget.isDarkMode)
+          : TrainerManagementPage(isDarkMode: widget.isDarkMode, isCoach: false,),
       const ActivityPage(),
       const LibraryPage(),
       MenuPage(
@@ -120,7 +127,8 @@ class _MainPageState extends State<MainPage> {
           BottomNavigationBarItem(
             icon: const Icon(Icons.search_outlined),
             activeIcon: Icon(Icons.search, color: accentColor),
-            label: 'Search',
+            // Dynamic label based on user type
+            label: widget.isCoach ? 'Clients' : 'Trainers',
           ),
           BottomNavigationBarItem(
             icon: Container(
