@@ -4,16 +4,17 @@ import '../widgets/common/client_card.dart';
 import '../widgets/common/tab_selector.dart';
 import '../utils/theme_helper.dart';
 
-class ClientManagementPage extends StatefulWidget {
+class TrainerManagementPage extends StatefulWidget {
   final bool isDarkMode;
+  final bool isCoach;
 
-  const ClientManagementPage({Key? key, required this.isDarkMode}) : super(key: key);
+  const TrainerManagementPage({Key? key, required this.isDarkMode, required this.isCoach}) : super(key: key);
 
   @override
-  State<ClientManagementPage> createState() => _ClientManagementPageState();
+  State<TrainerManagementPage> createState() => _TrainerManagementPageState();
 }
 
-class _ClientManagementPageState extends State<ClientManagementPage> {
+class _TrainerManagementPageState extends State<TrainerManagementPage> {
   bool isOnlineClients = true;
   int? selectedClientIndex;
 
@@ -51,7 +52,7 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Text(
-              'Meet Your Clients',
+              'Meet Your Trainers',
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
@@ -86,10 +87,10 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
                   client: clients[index],
                   isDarkMode: widget.isDarkMode,
                   accentColor: accentColor,
-                  isHighlighted: selectedClientIndex == index,
+                  isHighlighted: selectedClientIndex == index, // Check if selected
                   onTap: () {
                     setState(() {
-                      selectedClientIndex = index;
+                      selectedClientIndex = index; // Update selected index
                     });
                   },
                 );
