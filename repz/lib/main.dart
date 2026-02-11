@@ -60,10 +60,11 @@ class _MyAppState extends State<MyApp> {
 }
 
 class _AuthGate extends StatelessWidget {
-  const _AuthGate({required this.isDarkMode, required this.onThemeChanged});
+  const _AuthGate({required this.isDarkMode, required this.onThemeChanged, required this.isCoach});
 
   final bool isDarkMode;
   final ValueChanged<bool> onThemeChanged;
+  final bool isCoach;
 
   @override
   Widget build(BuildContext context) {
@@ -95,6 +96,7 @@ class _AuthGate extends StatelessWidget {
           return MainPage(
             isDarkMode: isDarkMode,
             onThemeChanged: onThemeChanged,
+            isCoach: true,
           );
         }
 
