@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:repz/views/client_management.dart';
-import 'package:repz/views/trainer_management.dart';
-import 'package:repz/views/home_page.dart';
-import 'package:repz/views/search_page.dart';
 import 'package:repz/views/activity_page.dart';
-import 'package:repz/views/library_page.dart';
+import 'package:repz/views/client_management.dart';
+import 'package:repz/views/feed_page.dart';
+import 'package:repz/views/home_page.dart';
 import 'package:repz/views/menu_page.dart';
+import 'package:repz/views/trainer_management.dart';
 
 void main() {
   runApp(const MyApp());
@@ -86,7 +85,7 @@ class _MainPageState extends State<MainPage> {
           ? ClientManagementPage(isDarkMode: widget.isDarkMode)
           : TrainerManagementPage(isDarkMode: widget.isDarkMode, isCoach: false,),
       const ActivityPage(),
-      const LibraryPage(),
+      FeedPage(isDarkMode: widget.isDarkMode),
       MenuPage(
         isDarkMode: widget.isDarkMode,
         onThemeChanged: widget.onThemeChanged,
@@ -161,7 +160,7 @@ class _MainPageState extends State<MainPage> {
           BottomNavigationBarItem(
             icon: const Icon(Icons.folder_outlined),
             activeIcon: Icon(Icons.folder, color: accentColor),
-            label: 'Library',
+            label: 'Feed',
           ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.menu_outlined),
