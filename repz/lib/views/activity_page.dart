@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:repz/views/object_detector_view.dart';
 import 'package:repz/views/pose_detector_view.dart';
 
 class ActivityPage extends StatelessWidget {
@@ -47,7 +48,7 @@ class ActivityPage extends StatelessWidget {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => PoseDetectorView(),
+                                builder: (context) => ObjectDetectorView(),
                               ),
                             );
                           },
