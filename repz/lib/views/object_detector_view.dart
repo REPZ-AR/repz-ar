@@ -19,9 +19,10 @@ class _ObjectDetectorView extends State<ObjectDetectorView> {
   CustomPaint? _customPaint;
   String? _text;
   var _cameraLensDirection = CameraLensDirection.back;
-  int _option = 0;
+  int _option = 1;
   final _options = {
-    'default': ''
+    'default': '',
+    'gym_equipment': 'gym_equipment_model.tflite',
     // 'object_custom': 'object_labeler.tflite',
     // 'fruits': 'object_labeler_fruits.tflite',
     // 'flowers': 'object_labeler_flowers.tflite',
