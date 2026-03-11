@@ -4,14 +4,44 @@ import 'package:flutter/services.dart';
 
 class BaselineFrame {
   final int timestamp;
-  final List<Map<String, dynamic>> landmarks;
+  final Map<String, dynamic> landmarks;
 
   BaselineFrame({required this.timestamp, required this.landmarks});
 
   factory BaselineFrame.fromJson(Map<String, dynamic> json) {
+    Map<String, dynamic> parsedLandmarks = {};
+
+    // Check if the JSON file is using the older List format
+    if (json['landmarks'] is List) {
+      List<dynamic> listData = json['landmarks'];
+
+      // Google ML Kit's standard index mapping
+      const List<String> jointNames = [
+        'nose', 'leftEyeInner', 'leftEye', 'leftEyeOuter',
+        'rightEyeInner', 'rightEye', 'rightEyeOuter',
+        'leftEar', 'rightEar', 'mouthLeft', 'mouthRight',
+        'leftShoulder', 'rightShoulder', 'leftElbow', 'rightElbow',
+        'leftWrist', 'rightWrist', 'leftPinky', 'rightPinky',
+        'leftIndex', 'rightIndex', 'leftThumb', 'rightThumb',
+        'leftHip', 'rightHip', 'leftKnee', 'rightKnee',
+        'leftAnkle', 'rightAnkle', 'leftHeel', 'rightHeel',
+        'leftFootIndex', 'rightFootIndex'
+      ];
+
+      for (int i = 0; i < listData.length; i++) {
+        if (i < jointNames.length) {
+          // Map the old index to the new string key
+          parsedLandmarks[jointNames[i]] = listData[i];
+        }
+      }
+    } else {
+      // If it's already using the new format from utils.dart
+      parsedLandmarks = Map<String, dynamic>.from(json['landmarks']);
+    }
+
     return BaselineFrame(
-      timestamp: json['timestamp_ms'],
-      landmarks: List<Map<String, dynamic>>.from(json['landmarks']),
+      timestamp: json['timestamp'] ?? json['timestamp_ms'] ?? 0,
+      landmarks: parsedLandmarks,
     );
   }
 
@@ -124,7 +154,7 @@ class _BaselineInspectorState extends State<BaselineInspector> {
 }
 
 class BaselinePainter extends CustomPainter {
-  final List<Map<String, dynamic>> landmarks;
+  final Map<String, dynamic> landmarks;
 
   BaselinePainter({required this.landmarks});
 
@@ -144,9 +174,9 @@ class BaselinePainter extends CustomPainter {
     final double offsetX = size.width / 2;
     final double offsetY = size.height / 2;
 
-    Offset getPoint(int index) {
-      if (index >= landmarks.length) return Offset.zero;
-      final lm = landmarks[index];
+    Offset? getPoint(String key) {
+      if (!landmarks.containsKey(key)) return null;
+      final lm = landmarks[key];
 
       double x = (lm['x'] * scale) + offsetX;
       double y = (lm['y'] * scale) + offsetY;
@@ -157,22 +187,35 @@ class BaselinePainter extends CustomPainter {
     // --- DRAWING LOGIC ---
 
     final connections = [
-      [11, 13], [13, 15], // Left Arm (Shoulder->Elbow->Wrist)
-      [12, 14], [14, 16], // Right Arm
-      [11, 12],           // Shoulders
-      [11, 23], [12, 24], // Torso (Shoulder->Hip)
-      [23, 24],           // Hips
+      ['leftShoulder', 'leftElbow'], ['leftElbow', 'leftWrist'],    // Left Arm
+      ['rightShoulder', 'rightElbow'], ['rightElbow', 'rightWrist'],// Right Arm
+      ['leftShoulder', 'rightShoulder'],                            // Shoulders
+      ['leftShoulder', 'leftHip'], ['rightShoulder', 'rightHip'],   // Torso
+      ['leftHip', 'rightHip'],                                      // Hips
     ];
 
     for (var pair in connections) {
-      if (landmarks.length > pair[1]) {
-        canvas.drawLine(getPoint(pair[0]), getPoint(pair[1]), paint);
+      final p1 = getPoint(pair[0]);
+      final p2 = getPoint(pair[1]);
+
+      // Only draw the line if both joints exist in the map
+      if (p1 != null && p2 != null) {
+        canvas.drawLine(p1, p2, paint);
       }
     }
 
-    for (int i = 11; i <= 16; i++) {
-      if (landmarks.length > i) {
-        canvas.drawCircle(getPoint(i), 6, jointPaint);
+    // List of active joints we want to render the red dots for
+    final jointsToDraw = [
+      'leftShoulder', 'rightShoulder',
+      'leftElbow', 'rightElbow',
+      'leftWrist', 'rightWrist',
+      'leftHip', 'rightHip'
+    ];
+
+    for (String joint in jointsToDraw) {
+      final p = getPoint(joint);
+      if (p != null) {
+        canvas.drawCircle(p, 6, jointPaint);
       }
     }
   }

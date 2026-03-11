@@ -9,6 +9,7 @@ class CameraView extends StatefulWidget {
   CameraView(
       {super.key,
       required this.customPaint,
+        this.text,
       required this.onImage,
       this.onCameraFeedReady,
       this.onDetectorViewModeChanged,
@@ -16,6 +17,7 @@ class CameraView extends StatefulWidget {
       this.initialCameraLensDirection = CameraLensDirection.back});
 
   final CustomPaint? customPaint;
+  final String? text;
   final Function(InputImage inputImage) onImage;
   final VoidCallback? onCameraFeedReady;
   final VoidCallback? onDetectorViewModeChanged;
@@ -90,6 +92,29 @@ class _CameraViewState extends State<CameraView> {
                     child: widget.customPaint,
                   ),
           ),
+          if (widget.text != null && widget.text!.isNotEmpty)
+            Positioned(
+              top: 100, // Pushed down so it doesn't overlap the back button
+              left: 16,
+              right: 16,
+              child: Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.black87.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.lightGreenAccent, width: 2),
+                ),
+                child: Text(
+                  widget.text!,
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
           _backButton(),
           _switchLiveCameraToggle(),
           _detectionViewModeToggle(),

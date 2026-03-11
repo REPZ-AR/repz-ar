@@ -4,6 +4,11 @@ import json
 import numpy as np
 from mediapipe.tasks.python.vision.pose_landmarker import PoseLandmark
 
+# Helper function to convert "LEFT_ELBOW" to "leftElbow"
+def to_camel_case(snake_str):
+    components = snake_str.lower().split('_')
+    return components[0] + ''.join(x.title() for x in components[1:])
+
 # 1. Setup MediaPipe Pose
 BaseOptions = mp.tasks.BaseOptions
 PoseLandmarker = mp.tasks.vision.PoseLandmarker
@@ -43,29 +48,29 @@ while cap.isOpened():
     result = landmarker.detect_for_video(mp_image, timestamp_ms)
 
     # 3. Extract Data
-    # We check if any pose was detected in this frame
     if result.pose_world_landmarks:
         landmarks = result.pose_world_landmarks[0]
-    frame_landmarks = []
 
-    # Use enumerate to get the index (i) for each landmark
-    for i, lm in enumerate(landmarks):
-        # Map the index to the human-readable name
-        landmark_name = PoseLandmark(i).name
+        # CHANGED: Now a Dictionary (Map) instead of a List
+        frame_landmarks = {}
 
-        frame_landmarks.append({
-            'index': i,
-            'joint': landmark_name, # This will now be "LEFT_ELBOW", etc.
-            'x': lm.x,
-            'y': lm.y,
-            'z': lm.z,
-            'visibility': lm.visibility
+        for i, lm in enumerate(landmarks):
+            # Convert "LEFT_ELBOW" to "leftElbow" to match Dart's ML Kit output
+            raw_name = PoseLandmark(i).name
+            camel_case_name = to_camel_case(raw_name)
+
+            # Map the data directly to the joint name key
+            frame_landmarks[camel_case_name] = {
+                'x': lm.x,
+                'y': lm.y,
+                'z': lm.z,
+                'likelihood': lm.visibility # Renamed to match ML Kit's 'likelihood'
+            }
+
+        frame_data.append({
+            'timestamp': timestamp_ms, # Changed to match Dart's 'timestamp' preference
+            'landmarks': frame_landmarks
         })
-
-    frame_data.append({
-        'timestamp_ms': timestamp_ms,
-        'landmarks': frame_landmarks
-    })
 
     frame_index += 1
 
@@ -73,6 +78,6 @@ cap.release()
 
 # 4. Save to JSON
 with open('baseline_curls.json', 'w') as f:
-    json.dump(frame_data, f)
+    json.dump(frame_data, f, indent=2) # Added indent for readability
 
 print(f"Processed {len(frame_data)} frames and saved to baseline_curls.json")
