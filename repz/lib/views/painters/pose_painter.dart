@@ -33,7 +33,7 @@ class PosePainter extends CustomPainter {
 
     final defaultPaint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.0
+      ..strokeWidth = 4.0
       ..color = Colors.green;
 
     final leftPaint = Paint()

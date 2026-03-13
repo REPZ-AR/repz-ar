@@ -62,28 +62,7 @@ class ActivityPage extends StatelessWidget {
                               vertical: 16,
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 20),
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => PoseDetectorView(),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.fitness_center),
-                          label: const Text('Track Workout'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: accentColor,
-                            foregroundColor: Colors.black,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 32,
-                              vertical: 16,
-                            ),
-                          ),
-                        ),
+                        )
                       ],
                     ),
                   ),

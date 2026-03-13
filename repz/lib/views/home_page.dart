@@ -1,14 +1,35 @@
 import 'package:flutter/material.dart';
+import 'package:repz/views/pose_detector_view.dart';
+
+import '../model/workout.dart';
 
 class HomePage extends StatelessWidget {
   final bool isDarkMode;
+  final List<Exercise> todaysPlan = [
+    Exercise(
+      name: 'Bicep Curls',
+      duration: '10 min',
+      sets: '5 sets',
+      type: WorkoutType.curls,
+      assetPath: 'assets/data/baseline_curls.json',
+      targetJoints: ['leftShoulder', 'leftElbow', 'leftWrist'],
+    ),
+    Exercise(
+      name: 'Lateral Raises',
+      duration: '5 min',
+      sets: '3 sets',
+      type: WorkoutType.curls, // Reusing logic for demo
+      assetPath: 'assets/data/baseline_curls.json',
+      targetJoints: ['leftShoulder', 'leftElbow'],
+    ),
+  ];
 
-  const HomePage({Key? key, required this.isDarkMode}) : super(key: key);
+  HomePage({Key? key, required this.isDarkMode}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final accentColor =
-        isDarkMode ? const Color(0xFFCFF500) : const Color(0xFFA66CFF);
+    final featuredExercise = todaysPlan.first;
+    final accentColor = isDarkMode ? const Color(0xFFCFF500) : const Color(0xFFA66CFF);
     final cardColor = isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
     final textColor = isDarkMode ? Colors.white : Colors.black;
 
@@ -42,71 +63,65 @@ class HomePage extends StatelessWidget {
             const SizedBox(height: 20),
 
             // Today's workout card
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: cardColor,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: accentColor,
-                  width: 2,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: cardColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: accentColor, width: 2),
+          ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Chest Day',
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineSmall
-                                ?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: textColor,
-                                ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '• Intensity: High\n• Duration: 30min',
-                            style: TextStyle(
-                              color: Colors.grey[500],
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
+                      Text(
+                        featuredExercise.name, // DYNAMIC NAME
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: textColor,
+                        ),
                       ),
-                      Container(
-                        width: 60,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          color: accentColor,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.play_arrow,
-                          color: Colors.black,
-                          size: 32,
-                        ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '• Intensity: High\n• Duration: ${featuredExercise.duration}', // DYNAMIC DURATION
+                        style: TextStyle(color: Colors.grey[500], fontSize: 12),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  _ExerciseItem('Chest Press', '10 min', '5 sets'),
-                  const SizedBox(height: 8),
-                  _ExerciseItem('Chest Press', '5 min', '5 sets'),
-                  const SizedBox(height: 8),
-                  _ExerciseItem('Chest Press', '10 min', '5 sets'),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PoseDetectorView(
+                            exercises: todaysPlan,
+                            initialIndex: 0,
+                          ),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(color: accentColor, shape: BoxShape.circle),
+                      child: const Icon(Icons.play_arrow, color: Colors.black, size: 32),
+                    ),
+                  ),
                 ],
               ),
-            ),
-            const SizedBox(height: 20),
-
+              const SizedBox(height: 16),
+              // Map the rest of the list to exercise items
+              ...todaysPlan.map((ex) => Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: _ExerciseItem(ex.name, ex.duration, ex.sets),
+              )).toList(),
+            ],
+          ),
+        ),
             // Stats row
             Row(
               children: [
