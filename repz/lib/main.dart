@@ -7,7 +7,14 @@ import 'package:repz/views/menu_page.dart';
 import 'package:repz/views/trainer_management.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Supabase.initialize(
+    url: 'YOUR_PROJECT_URL',
+    anonKey: 'YOUR_PUBLISHABLE_KEY',
+  );
+
   runApp(const MyApp());
 }
 
