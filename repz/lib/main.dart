@@ -5,6 +5,7 @@ import 'package:repz/views/feed_page.dart';
 import 'package:repz/views/home_page.dart';
 import 'package:repz/views/menu_page.dart';
 import 'package:repz/views/trainer_management.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {
   runApp(const MyApp());
