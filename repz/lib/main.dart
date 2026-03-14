@@ -133,6 +133,24 @@ class _AuthGateState extends State<AuthGate> {
     }
   }
 
+  Future<void> _signOut() async {
+    setState(() => _loading = true);
+    try {
+      await Supabase.instance.client.auth.signOut();
+      if (!kIsWeb) {
+        await _googleSignIn.signOut();
+      }
+    } on AuthException catch (error) {
+      _showAuthError(error.message);
+    } catch (_) {
+      _showAuthError('Logout failed. Please try again.');
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
+  }
+
   void _showAuthError(String message) {
     if (!mounted) {
       return;
@@ -154,11 +172,18 @@ class _AuthGateState extends State<AuthGate> {
           return LoginPage(onContinue: _loading ? () {} : _signInWithGoogle);
         }
 
-        final avatarUrl = session.user.userMetadata?['avatar_url'] as String?;
+        final user = session.user;
+        final metadata = user.userMetadata;
+        final avatarUrl = metadata?['avatar_url'] as String?;
+        final displayName = (metadata?['full_name'] as String?) ??
+            (metadata?['name'] as String?);
         return MainPage(
           isDarkMode: widget.isDarkMode,
           isCoach: widget.isCoach,
           avatarUrl: avatarUrl,
+          userName: displayName,
+          userEmail: user.email,
+          onLogout: _loading ? null : _signOut,
           onThemeChanged: widget.onThemeChanged,
         );
       },
@@ -170,6 +195,9 @@ class MainPage extends StatefulWidget {
   final bool isDarkMode;
   final bool isCoach;
   final String? avatarUrl;
+  final String? userName;
+  final String? userEmail;
+  final Future<void> Function()? onLogout;
   final Function(bool) onThemeChanged;
 
   const MainPage({
@@ -178,6 +206,9 @@ class MainPage extends StatefulWidget {
     required this.isCoach,
     required this.onThemeChanged,
     this.avatarUrl,
+    this.userName,
+    this.userEmail,
+    this.onLogout,
   }) : super(key: key);
 
   @override
@@ -205,6 +236,10 @@ class _MainPageState extends State<MainPage> {
       FeedPage(isDarkMode: widget.isDarkMode),
       MenuPage(
         isDarkMode: widget.isDarkMode,
+        avatarUrl: widget.avatarUrl,
+        userName: widget.userName,
+        userEmail: widget.userEmail,
+        onLogout: widget.onLogout,
         onThemeChanged: widget.onThemeChanged,
       ),
     ];
