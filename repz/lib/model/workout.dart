@@ -1,4 +1,4 @@
-enum WorkoutType { curls, squats, benchPress, lifts }
+enum WorkoutType { curls, squats, benchPress, lifts, planks }
 
 class Exercise {
   final String name;
