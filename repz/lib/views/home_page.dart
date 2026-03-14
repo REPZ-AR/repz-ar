@@ -2,8 +2,13 @@ import 'package:flutter/material.dart';
 
 class HomePage extends StatelessWidget {
   final bool isDarkMode;
+  final String? avatarUrl;
 
-  const HomePage({Key? key, required this.isDarkMode}) : super(key: key);
+  const HomePage({
+    Key? key,
+    required this.isDarkMode,
+    this.avatarUrl,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -32,10 +37,16 @@ class HomePage extends StatelessWidget {
                 CircleAvatar(
                   radius: 20,
                   backgroundColor: accentColor,
-                  child: Icon(
-                    Icons.person,
-                    color: Colors.black,
-                  ),
+                  backgroundImage:
+                      (avatarUrl != null && avatarUrl!.isNotEmpty)
+                          ? NetworkImage(avatarUrl!)
+                          : null,
+                  child: (avatarUrl == null || avatarUrl!.isEmpty)
+                      ? const Icon(
+                          Icons.person,
+                          color: Colors.black,
+                        )
+                      : null,
                 ),
               ],
             ),

@@ -1,12 +1,28 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:repz/config/app_config.dart';
 import 'package:repz/views/activity_page.dart';
 import 'package:repz/views/client_management.dart';
 import 'package:repz/views/feed_page.dart';
 import 'package:repz/views/home_page.dart';
 import 'package:repz/views/menu_page.dart';
 import 'package:repz/views/trainer_management.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:repz/views/login_page.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  AppConfig.validate();
+
+  await Supabase.initialize(
+    url: AppConfig.supabaseUrl,
+    anonKey: AppConfig.supabaseAnonKey,
+    authOptions: const FlutterAuthClientOptions(
+      authFlowType: AuthFlowType.pkce,
+    ),
+  );
+
   runApp(const MyApp());
 }
 
@@ -38,7 +54,7 @@ class _MyAppState extends State<MyApp> {
         useMaterial3: true,
       ),
       themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
-      home: MainPage(
+      home: AuthGate(
         isDarkMode: isDarkMode,
         isCoach: isCoach,
         onThemeChanged: (bool value) {
@@ -51,9 +67,137 @@ class _MyAppState extends State<MyApp> {
   }
 }
 
+class AuthGate extends StatefulWidget {
+  final bool isDarkMode;
+  final bool isCoach;
+  final Function(bool) onThemeChanged;
+
+  const AuthGate({
+    Key? key,
+    required this.isDarkMode,
+    required this.isCoach,
+    required this.onThemeChanged,
+  }) : super(key: key);
+
+  @override
+  State<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<AuthGate> {
+  bool _loading = false;
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: const ['email', 'profile'],
+    // serverClientId must be the *Web* OAuth client ID from Google Cloud Console.
+    // The Google SDK uses this to mint an ID token that Supabase can verify.
+    serverClientId: AppConfig.googleWebClientId,
+  );
+
+  Future<void> _signInWithGoogle() async {
+    setState(() => _loading = true);
+    try {
+      if (kIsWeb) {
+        await Supabase.instance.client.auth.signInWithOAuth(
+          OAuthProvider.google,
+          redirectTo: AppConfig.supabaseRedirectUrl,
+        );
+        return;
+      }
+
+      await _googleSignIn.signOut();
+      final googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        return;
+      }
+
+      final googleAuth = await googleUser.authentication;
+      final idToken = googleAuth.idToken;
+      final accessToken = googleAuth.accessToken;
+
+      if (idToken == null) {
+        throw const AuthException('Google sign-in did not return an ID token.');
+      }
+
+      await Supabase.instance.client.auth.signInWithIdToken(
+        provider: OAuthProvider.google,
+        idToken: idToken,
+        accessToken: accessToken,
+      );
+    } on AuthException catch (error) {
+      _showAuthError(error.message);
+    } catch (error) {
+      _showAuthError('Google sign-in failed. Please try again.');
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
+  }
+
+  Future<void> _signOut() async {
+    setState(() => _loading = true);
+    try {
+      await Supabase.instance.client.auth.signOut();
+      if (!kIsWeb) {
+        await _googleSignIn.signOut();
+      }
+    } on AuthException catch (error) {
+      _showAuthError(error.message);
+    } catch (_) {
+      _showAuthError('Logout failed. Please try again.');
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
+  }
+
+  void _showAuthError(String message) {
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<AuthState>(
+      stream: Supabase.instance.client.auth.onAuthStateChange,
+      initialData: AuthState(AuthChangeEvent.initialSession, Supabase.instance.client.auth.currentSession),
+      builder: (context, snapshot) {
+        final session = snapshot.data?.session;
+        if (session == null) {
+          return LoginPage(onContinue: _loading ? () {} : _signInWithGoogle);
+        }
+
+        final user = session.user;
+        final metadata = user.userMetadata;
+        final avatarUrl = metadata?['avatar_url'] as String?;
+        final displayName = (metadata?['full_name'] as String?) ??
+            (metadata?['name'] as String?);
+        return MainPage(
+          isDarkMode: widget.isDarkMode,
+          isCoach: widget.isCoach,
+          avatarUrl: avatarUrl,
+          userName: displayName,
+          userEmail: user.email,
+          onLogout: _loading ? null : _signOut,
+          onThemeChanged: widget.onThemeChanged,
+        );
+      },
+    );
+  }
+}
+
 class MainPage extends StatefulWidget {
   final bool isDarkMode;
   final bool isCoach;
+  final String? avatarUrl;
+  final String? userName;
+  final String? userEmail;
+  final Future<void> Function()? onLogout;
   final Function(bool) onThemeChanged;
 
   const MainPage({
@@ -61,6 +205,10 @@ class MainPage extends StatefulWidget {
     required this.isDarkMode,
     required this.isCoach,
     required this.onThemeChanged,
+    this.avatarUrl,
+    this.userName,
+    this.userEmail,
+    this.onLogout,
   }) : super(key: key);
 
   @override
@@ -80,7 +228,7 @@ class _MainPageState extends State<MainPage> {
 
   void _buildPages() {
     _pages = [
-      HomePage(isDarkMode: widget.isDarkMode),
+      HomePage(isDarkMode: widget.isDarkMode, avatarUrl: widget.avatarUrl),
       widget.isCoach
           ? ClientManagementPage(isDarkMode: widget.isDarkMode)
           : TrainerManagementPage(isDarkMode: widget.isDarkMode, isCoach: false,),
@@ -88,6 +236,10 @@ class _MainPageState extends State<MainPage> {
       FeedPage(isDarkMode: widget.isDarkMode),
       MenuPage(
         isDarkMode: widget.isDarkMode,
+        avatarUrl: widget.avatarUrl,
+        userName: widget.userName,
+        userEmail: widget.userEmail,
+        onLogout: widget.onLogout,
         onThemeChanged: widget.onThemeChanged,
       ),
     ];
@@ -96,7 +248,7 @@ class _MainPageState extends State<MainPage> {
   @override
   void didUpdateWidget(MainPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.isDarkMode != widget.isDarkMode) {
+    if (oldWidget.isDarkMode != widget.isDarkMode || oldWidget.avatarUrl != widget.avatarUrl) {
       _buildPages();
     }
   }
@@ -126,7 +278,6 @@ class _MainPageState extends State<MainPage> {
           BottomNavigationBarItem(
             icon: const Icon(Icons.search_outlined),
             activeIcon: Icon(Icons.search, color: accentColor),
-            // Dynamic label based on user type
             label: widget.isCoach ? 'Clients' : 'Trainers',
           ),
           BottomNavigationBarItem(
