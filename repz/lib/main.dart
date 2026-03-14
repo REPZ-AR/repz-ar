@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:repz/config/app_config.dart';
 import 'package:repz/views/activity_page.dart';
 import 'package:repz/views/client_management.dart';
@@ -7,6 +9,7 @@ import 'package:repz/views/home_page.dart';
 import 'package:repz/views/menu_page.dart';
 import 'package:repz/views/trainer_management.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:repz/views/login_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -64,7 +67,7 @@ class _MyAppState extends State<MyApp> {
   }
 }
 
-class AuthGate extends StatelessWidget {
+class AuthGate extends StatefulWidget {
   final bool isDarkMode;
   final bool isCoach;
   final Function(bool) onThemeChanged;
@@ -77,45 +80,52 @@ class AuthGate extends StatelessWidget {
   }) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<AuthState>(
-      stream: Supabase.instance.client.auth.onAuthStateChange,
-      initialData: AuthState(AuthChangeEvent.initialSession, Supabase.instance.client.auth.currentSession),
-      builder: (context, snapshot) {
-        final session = snapshot.data?.session;
-        if (session == null) {
-          return const LoginPage();
-        }
-
-        final avatarUrl = session.user.userMetadata?['avatar_url'] as String?;
-        return MainPage(
-          isDarkMode: isDarkMode,
-          isCoach: isCoach,
-          avatarUrl: avatarUrl,
-          onThemeChanged: onThemeChanged,
-        );
-      },
-    );
-  }
+  State<AuthGate> createState() => _AuthGateState();
 }
 
-class LoginPage extends StatefulWidget {
-  const LoginPage({Key? key}) : super(key: key);
-
-  @override
-  State<LoginPage> createState() => _LoginPageState();
-}
-
-class _LoginPageState extends State<LoginPage> {
+class _AuthGateState extends State<AuthGate> {
   bool _loading = false;
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: const ['email', 'profile'],
+    // serverClientId must be the *Web* OAuth client ID from Google Cloud Console.
+    // The Google SDK uses this to mint an ID token that Supabase can verify.
+    serverClientId: AppConfig.googleWebClientId,
+  );
 
   Future<void> _signInWithGoogle() async {
     setState(() => _loading = true);
     try {
-      await Supabase.instance.client.auth.signInWithOAuth(
-        OAuthProvider.google,
-        redirectTo: AppConfig.supabaseRedirectUrl,
+      if (kIsWeb) {
+        await Supabase.instance.client.auth.signInWithOAuth(
+          OAuthProvider.google,
+          redirectTo: AppConfig.supabaseRedirectUrl,
+        );
+        return;
+      }
+
+      await _googleSignIn.signOut();
+      final googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        return;
+      }
+
+      final googleAuth = await googleUser.authentication;
+      final idToken = googleAuth.idToken;
+      final accessToken = googleAuth.accessToken;
+
+      if (idToken == null) {
+        throw const AuthException('Google sign-in did not return an ID token.');
+      }
+
+      await Supabase.instance.client.auth.signInWithIdToken(
+        provider: OAuthProvider.google,
+        idToken: idToken,
+        accessToken: accessToken,
       );
+    } on AuthException catch (error) {
+      _showAuthError(error.message);
+    } catch (error) {
+      _showAuthError('Google sign-in failed. Please try again.');
     } finally {
       if (mounted) {
         setState(() => _loading = false);
@@ -123,31 +133,35 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  void _showAuthError(String message) {
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text(
-                'Welcome to Repz',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              const Text('Sign in with Google to continue'),
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: _loading ? null : _signInWithGoogle,
-                icon: const Icon(Icons.login),
-                label: Text(_loading ? 'Signing in...' : 'Continue with Google'),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return StreamBuilder<AuthState>(
+      stream: Supabase.instance.client.auth.onAuthStateChange,
+      initialData: AuthState(AuthChangeEvent.initialSession, Supabase.instance.client.auth.currentSession),
+      builder: (context, snapshot) {
+        final session = snapshot.data?.session;
+        if (session == null) {
+          return LoginPage(onContinue: _loading ? () {} : _signInWithGoogle);
+        }
+
+        final avatarUrl = session.user.userMetadata?['avatar_url'] as String?;
+        return MainPage(
+          isDarkMode: widget.isDarkMode,
+          isCoach: widget.isCoach,
+          avatarUrl: avatarUrl,
+          onThemeChanged: widget.onThemeChanged,
+        );
+      },
     );
   }
 }
