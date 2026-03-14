@@ -18,7 +18,7 @@ class HomePage extends StatelessWidget {
       name: 'Lateral Raises',
       duration: '5 min',
       sets: '3 sets',
-      type: WorkoutType.curls, // Reusing logic for demo
+      type: WorkoutType.curls,
       assetPath: 'assets/data/baseline_curls.json',
       targetJoints: ['leftShoulder', 'leftElbow'],
     ),
@@ -79,7 +79,7 @@ class HomePage extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        featuredExercise.name, // DYNAMIC NAME
+                        featuredExercise.name,
                         style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: textColor,
@@ -87,7 +87,7 @@ class HomePage extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '• Intensity: High\n• Duration: ${featuredExercise.duration}', // DYNAMIC DURATION
+                        '• Intensity: High\n• Duration: ${featuredExercise.duration}',
                         style: TextStyle(color: Colors.grey[500], fontSize: 12),
                       ),
                     ],
@@ -114,11 +114,22 @@ class HomePage extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 16),
-              // Map the rest of the list to exercise items
-              ...todaysPlan.map((ex) => Padding(
-                padding: const EdgeInsets.only(bottom: 8.0),
-                child: _ExerciseItem(ex.name, ex.duration, ex.sets),
-              )).toList(),
+              // workout list
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 200),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: todaysPlan.length,
+                  itemBuilder: (context, index) {
+                    final ex = todaysPlan[index];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6.0),
+                      child: _ExerciseItem(ex.name, ex.duration, ex.sets),
+                    );
+                  },
+                ),
+              ),
             ],
           ),
         ),

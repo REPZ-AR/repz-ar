@@ -4,6 +4,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mlkit_commons/google_mlkit_commons.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 class CameraView extends StatefulWidget {
   CameraView(
@@ -14,7 +15,10 @@ class CameraView extends StatefulWidget {
       this.onCameraFeedReady,
       this.onDetectorViewModeChanged,
       this.onCameraLensDirectionChanged,
-      this.initialCameraLensDirection = CameraLensDirection.back});
+      this.initialCameraLensDirection = CameraLensDirection.back,
+      this.customTopWidget,
+      this.customBottomWidget,
+      });
 
   final CustomPaint? customPaint;
   final String? text;
@@ -23,6 +27,8 @@ class CameraView extends StatefulWidget {
   final VoidCallback? onDetectorViewModeChanged;
   final Function(CameraLensDirection direction)? onCameraLensDirectionChanged;
   final CameraLensDirection initialCameraLensDirection;
+  final Widget? customTopWidget;
+  final Widget? customBottomWidget;
 
   @override
   State<CameraView> createState() => _CameraViewState();
@@ -115,11 +121,12 @@ class _CameraViewState extends State<CameraView> {
                 ),
               ),
             ),
-          _backButton(),
           _switchLiveCameraToggle(),
-          _detectionViewModeToggle(),
           _zoomControl(),
           _exposureControl(),
+
+          if (widget.customTopWidget != null) widget.customTopWidget!,
+          if (widget.customBottomWidget != null) widget.customBottomWidget!,
         ],
       ),
     );
@@ -280,6 +287,7 @@ class _CameraViewState extends State<CameraView> {
       );
 
   Future _startLiveFeed() async {
+    WakelockPlus.enable();
     final camera = _cameras[_cameraIndex];
     _controller = CameraController(
       camera,
@@ -324,6 +332,7 @@ class _CameraViewState extends State<CameraView> {
     await _controller?.stopImageStream();
     await _controller?.dispose();
     _controller = null;
+    WakelockPlus.disable();
   }
 
   Future _switchLiveCamera() async {

@@ -37,7 +37,7 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
   bool _isBusy = false;
   CustomPaint? _customPaint;
   String? _text;
-  var _cameraLensDirection = CameraLensDirection.back;
+  var _cameraLensDirection = CameraLensDirection.front;
   PoseLogger _logger = PoseLogger();
   List<Map<String, Offset>> _normalizedBaseline = [];
   bool _isBaselineLoaded = false;
@@ -105,7 +105,47 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
       onImage: _processImage,
       initialCameraLensDirection: _cameraLensDirection,
       onCameraLensDirectionChanged: (value) => _cameraLensDirection = value,
+
+      customTopWidget: Positioned(
+        top: 50,
+        left: 0,
+        right: 0,
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(20)
+            ),
+            child: Text(
+              _currentExercise.name,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ),
+
+      customBottomWidget: Positioned(
+        bottom: 80,
+        right: 16,
+        child: ElevatedButton.icon(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFCFF500), // Theme Accent Color
+            foregroundColor: Colors.black,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          ),
+          onPressed: _nextExercise,
+          icon: const Icon(Icons.skip_next),
+          label: const Text('Next', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        ),
+      ),
     );
+
+
   }
 
   Future<void> _processImage(InputImage inputImage) async {
