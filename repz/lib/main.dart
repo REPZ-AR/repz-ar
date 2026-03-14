@@ -1,7 +1,8 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:repz/config/app_config.dart';
+import 'package:repz/model/profile.dart';
+import 'package:repz/repositories/auth_repository.dart';
+import 'package:repz/repositories/profile_repository.dart';
 import 'package:repz/views/activity_page.dart';
 import 'package:repz/views/client_management.dart';
 import 'package:repz/views/feed_page.dart';
@@ -85,46 +86,20 @@ class AuthGate extends StatefulWidget {
 
 class _AuthGateState extends State<AuthGate> {
   bool _loading = false;
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: const ['email', 'profile'],
-    // serverClientId must be the *Web* OAuth client ID from Google Cloud Console.
-    // The Google SDK uses this to mint an ID token that Supabase can verify.
-    serverClientId: AppConfig.googleWebClientId,
-  );
+  bool _profileLoading = false;
+  Profile? _profile;
+  String? _profileError;
+
+  final _authRepository = AuthRepository();
+  final _profileRepository = ProfileRepository();
 
   Future<void> _signInWithGoogle() async {
     setState(() => _loading = true);
     try {
-      if (kIsWeb) {
-        await Supabase.instance.client.auth.signInWithOAuth(
-          OAuthProvider.google,
-          redirectTo: AppConfig.supabaseRedirectUrl,
-        );
-        return;
-      }
-
-      await _googleSignIn.signOut();
-      final googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) {
-        return;
-      }
-
-      final googleAuth = await googleUser.authentication;
-      final idToken = googleAuth.idToken;
-      final accessToken = googleAuth.accessToken;
-
-      if (idToken == null) {
-        throw const AuthException('Google sign-in did not return an ID token.');
-      }
-
-      await Supabase.instance.client.auth.signInWithIdToken(
-        provider: OAuthProvider.google,
-        idToken: idToken,
-        accessToken: accessToken,
-      );
+      await _authRepository.signInWithGoogle();
     } on AuthException catch (error) {
       _showAuthError(error.message);
-    } catch (error) {
+    } catch (_) {
       _showAuthError('Google sign-in failed. Please try again.');
     } finally {
       if (mounted) {
@@ -136,10 +111,7 @@ class _AuthGateState extends State<AuthGate> {
   Future<void> _signOut() async {
     setState(() => _loading = true);
     try {
-      await Supabase.instance.client.auth.signOut();
-      if (!kIsWeb) {
-        await _googleSignIn.signOut();
-      }
+      await _authRepository.signOut();
     } on AuthException catch (error) {
       _showAuthError(error.message);
     } catch (_) {
@@ -161,11 +133,84 @@ class _AuthGateState extends State<AuthGate> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
+  Future<void> _loadProfileFlag(User user) async {
+    if (_profileLoading) {
+      return;
+    }
+
+    setState(() {
+      _profileLoading = true;
+      _profileError = null;
+    });
+
+    try {
+      final profile = await _profileRepository.fetchProfile(user.id);
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _profile = profile;
+      });
+    } on PostgrestException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _profileError = error.message;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _profileError = 'Failed to load your profile. Please try again.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _profileLoading = false);
+      }
+    }
+  }
+
+  Future<void> _markFirstTimeComplete() async {
+    final userId = _profile?.userId;
+    if (userId == null) {
+      return;
+    }
+
+    setState(() => _profileLoading = true);
+    try {
+      final updated = await _profileRepository.markFirstTimeComplete(userId);
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _profile = updated;
+        _profileError = null;
+      });
+    } on PostgrestException catch (error) {
+      _showAuthError(error.message);
+    } catch (_) {
+      _showAuthError('Could not complete setup. Please try again.');
+    } finally {
+      if (mounted) {
+        setState(() => _profileLoading = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<AuthState>(
-      stream: Supabase.instance.client.auth.onAuthStateChange,
-      initialData: AuthState(AuthChangeEvent.initialSession, Supabase.instance.client.auth.currentSession),
+      stream: _authRepository.onAuthStateChange,
+      initialData: AuthState(
+        AuthChangeEvent.initialSession,
+        _authRepository.currentSession,
+      ),
       builder: (context, snapshot) {
         final session = snapshot.data?.session;
         if (session == null) {
@@ -173,6 +218,54 @@ class _AuthGateState extends State<AuthGate> {
         }
 
         final user = session.user;
+        if (_profile?.userId != user.id && !_profileLoading) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              _loadProfileFlag(user);
+            }
+          });
+        }
+
+        if (_profileLoading && _profile?.userId != user.id) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (_profileError != null && _profile?.userId != user.id) {
+          return Scaffold(
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Could not load profile.'),
+                    const SizedBox(height: 12),
+                    Text(
+                      _profileError!,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () => _loadProfileFlag(user),
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        if (_profile?.userId == user.id && _profile?.firstTime == true) {
+          return FirstTimeSetupView(
+            isLoading: _profileLoading,
+            onContinue: _markFirstTimeComplete,
+            onLogout: _loading ? null : _signOut,
+          );
+        }
+
         final metadata = user.userMetadata;
         final avatarUrl = metadata?['avatar_url'] as String?;
         final displayName = (metadata?['full_name'] as String?) ??
@@ -323,3 +416,63 @@ class _MainPageState extends State<MainPage> {
     );
   }
 }
+
+class FirstTimeSetupView extends StatelessWidget {
+  final bool isLoading;
+  final Future<void> Function() onContinue;
+  final Future<void> Function()? onLogout;
+
+  const FirstTimeSetupView({
+    Key? key,
+    required this.isLoading,
+    required this.onContinue,
+    this.onLogout,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Welcome to Repz',
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'This is a temporary first-time setup view. Continue to enter the app.',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: isLoading ? null : onContinue,
+                    child: isLoading
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Continue'),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: isLoading ? null : onLogout,
+                  child: const Text('Logout'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
