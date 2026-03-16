@@ -16,11 +16,13 @@ import 'painters/pose_painter.dart';
 class PoseDetectorView extends StatefulWidget {
   final List<Exercise> exercises;
   final int initialIndex;
+  final Function(int)? onProgressSaved;
 
   const PoseDetectorView({
     super.key,
     required this.exercises,
-    this.initialIndex = 0
+    this.initialIndex = 0,
+    this.onProgressSaved,
   });
 
   @override
@@ -90,7 +92,8 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
 
 
   @override
-  void dispose() async {
+  void dispose() {
+    widget.onProgressSaved?.call(_currentIndex);
     _canProcess = false;
     _poseDetector.close();
     super.dispose();
@@ -234,9 +237,15 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
 
   void _nextExercise() {
     if (_currentIndex < widget.exercises.length - 1) {
-      _loadExercise(_currentIndex + 1);
+      setState(() {
+        _currentIndex++;
+      });
+      _loadExercise(_currentIndex);
     } else {
-      Navigator.pop(context); // Workout complete
+      setState(() {
+        _currentIndex = 0; // Reset index to the start for next time
+      });
+      Navigator.pop(context);
     }
   }
 }

@@ -3,8 +3,19 @@ import 'package:repz/views/pose_detector_view.dart';
 
 import '../model/workout.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   final bool isDarkMode;
+
+  HomePage({Key? key, required this.isDarkMode}) : super(key: key);
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+
+  int _currentWorkoutIndex = 0;
+
   final List<Exercise> todaysPlan = [
     Exercise(
       name: 'Bicep Curls',
@@ -24,14 +35,13 @@ class HomePage extends StatelessWidget {
     ),
   ];
 
-  HomePage({Key? key, required this.isDarkMode}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final featuredExercise = todaysPlan.first;
-    final accentColor = isDarkMode ? const Color(0xFFCFF500) : const Color(0xFFA66CFF);
-    final cardColor = isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
-    final textColor = isDarkMode ? Colors.white : Colors.black;
+    final featuredExercise = todaysPlan[_currentWorkoutIndex];;
+    final accentColor = widget.isDarkMode ? const Color(0xFFCFF500) : const Color(0xFFA66CFF);
+    final cardColor = widget.isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
+    final textColor = widget.isDarkMode ? Colors.white : Colors.black;
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -99,7 +109,16 @@ class HomePage extends StatelessWidget {
                         MaterialPageRoute(
                           builder: (context) => PoseDetectorView(
                             exercises: todaysPlan,
-                            initialIndex: 0,
+                            initialIndex: _currentWorkoutIndex,
+                            onProgressSaved: (savedIndex) {
+                              Future.microtask(() {
+                                if (mounted) {
+                                  setState(() {
+                                    _currentWorkoutIndex = savedIndex;
+                                  });
+                                }
+                              });
+                            },
                           ),
                         ),
                       );
@@ -123,6 +142,7 @@ class HomePage extends StatelessWidget {
                   itemCount: todaysPlan.length,
                   itemBuilder: (context, index) {
                     final ex = todaysPlan[index];
+                    final isCompleted = index < _currentWorkoutIndex;
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 6.0),
                       child: _ExerciseItem(ex.name, ex.duration, ex.sets),
@@ -141,7 +161,7 @@ class HomePage extends StatelessWidget {
                     title: 'Workouts\nCompleted',
                     value: '4/6',
                     accentColor: accentColor,
-                    isDarkMode: isDarkMode,
+                    isDarkMode: widget.isDarkMode,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -150,7 +170,7 @@ class HomePage extends StatelessWidget {
                     title: 'Streak\nScore',
                     value: '75',
                     accentColor: accentColor,
-                    isDarkMode: isDarkMode,
+                    isDarkMode: widget.isDarkMode,
                   ),
                 ),
               ],
@@ -165,7 +185,7 @@ class HomePage extends StatelessWidget {
                     title: 'Next Rest in',
                     value: '2',
                     subtitle: 'Days',
-                    isDarkMode: isDarkMode,
+                    isDarkMode: widget.isDarkMode,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -174,7 +194,7 @@ class HomePage extends StatelessWidget {
                     title: 'Calory\nGoal',
                     value: '350',
                     subtitle: '',
-                    isDarkMode: isDarkMode,
+                    isDarkMode: widget.isDarkMode,
                   ),
                 ),
               ],
