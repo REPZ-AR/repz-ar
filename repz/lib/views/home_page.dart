@@ -68,10 +68,10 @@ class _HomePageState extends State<HomePage> {
                   radius: 20,
                   backgroundColor: accentColor,
                   backgroundImage:
-                      (avatarUrl != null && avatarUrl!.isNotEmpty)
-                          ? NetworkImage(avatarUrl!)
+                      (widget.avatarUrl != null && widget.avatarUrl!.isNotEmpty)
+                          ? NetworkImage(widget.avatarUrl!)
                           : null,
-                  child: (avatarUrl == null || avatarUrl!.isEmpty)
+                  child: (widget.avatarUrl == null || widget.avatarUrl!.isEmpty)
                       ? const Icon(
                           Icons.person,
                           color: Colors.black,

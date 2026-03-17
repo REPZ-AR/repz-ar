@@ -103,7 +103,8 @@ class _CameraViewState extends State<CameraView> {
               top: 100, // Pushed down so it doesn't overlap the back button
               left: 16,
               right: 16,
-              child: Container(
+              child: IgnorePointer(
+                  child: Container(
                 padding: EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.black87.withOpacity(0.7),
@@ -119,6 +120,7 @@ class _CameraViewState extends State<CameraView> {
                   ),
                   textAlign: TextAlign.center,
                 ),
+              )
               ),
             ),
           _switchLiveCameraToggle(),

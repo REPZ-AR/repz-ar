@@ -30,6 +30,7 @@ class PoseDetectorView extends StatefulWidget {
 }
 
 class _PoseDetectorViewState extends State<PoseDetectorView> {
+  final GlobalKey _nextButtonKey = GlobalKey();
   late int _currentIndex;
   late Exercise _currentExercise;
 
@@ -133,6 +134,7 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
       ),
 
       customBottomWidget: Positioned(
+        key: _nextButtonKey,
         bottom: 80,
         right: 16,
         child: ElevatedButton.icon(
