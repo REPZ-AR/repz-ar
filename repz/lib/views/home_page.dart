@@ -5,8 +5,12 @@ import '../model/workout.dart';
 
 class HomePage extends StatefulWidget {
   final bool isDarkMode;
+  final String? avatarUrl;
 
-  HomePage({Key? key, required this.isDarkMode}) : super(key: key);
+  HomePage({Key? key,
+    required this.isDarkMode,
+    this.avatarUrl,
+  }) : super(key: key);
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -63,10 +67,16 @@ class _HomePageState extends State<HomePage> {
                 CircleAvatar(
                   radius: 20,
                   backgroundColor: accentColor,
-                  child: Icon(
-                    Icons.person,
-                    color: Colors.black,
-                  ),
+                  backgroundImage:
+                      (avatarUrl != null && avatarUrl!.isNotEmpty)
+                          ? NetworkImage(avatarUrl!)
+                          : null,
+                  child: (avatarUrl == null || avatarUrl!.isEmpty)
+                      ? const Icon(
+                          Icons.person,
+                          color: Colors.black,
+                        )
+                      : null,
                 ),
               ],
             ),
