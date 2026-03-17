@@ -11,7 +11,7 @@ class WideProceedButton extends StatelessWidget {
     this.height = 58,
     this.backgroundColor = AppColors.white,
     this.textColor = AppColors.black,
-    this.arrowBackgroundColor = AppColors.primary,
+    this.arrowBackgroundColor = AppColors.accent,
     this.arrowIconColor = AppColors.black,
     this.arrowIcon = Icons.arrow_forward,
     this.horizontalPadding = const EdgeInsets.symmetric(horizontal: 14),

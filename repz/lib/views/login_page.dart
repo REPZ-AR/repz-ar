@@ -29,7 +29,6 @@ class LoginPage extends StatelessWidget {
             ),
           ),
 
-          // Frosted/washed overlay like the mockup
           const Positioned.fill(
             child: ColoredBox(
               color: AppColors.overlayLight,
