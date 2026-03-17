@@ -8,6 +8,7 @@ import 'package:repz/views/client_management.dart';
 import 'package:repz/views/feed_page.dart';
 import 'package:repz/views/home_page.dart';
 import 'package:repz/views/menu_page.dart';
+import 'package:repz/views/object_detector_view.dart';
 import 'package:repz/views/trainer_management.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:repz/views/login_page.dart';
@@ -325,7 +326,7 @@ class _MainPageState extends State<MainPage> {
       widget.isCoach
           ? ClientManagementPage(isDarkMode: widget.isDarkMode)
           : TrainerManagementPage(isDarkMode: widget.isDarkMode, isCoach: false,),
-      const ActivityPage(),
+      ObjectDetectorView(),
       FeedPage(isDarkMode: widget.isDarkMode),
       MenuPage(
         isDarkMode: widget.isDarkMode,
