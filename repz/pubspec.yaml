@@ -71,6 +71,7 @@ flutter:
     - ./assets/ml/gym_equipment_classifier.tflite
     - ./assets/images/login_bg.png
     - ./assets/images/mode_picker_bg.png
+    - ./assets/images/google_icon.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:

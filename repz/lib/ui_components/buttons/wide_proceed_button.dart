@@ -6,7 +6,7 @@ class WideProceedButton extends StatelessWidget {
   const WideProceedButton({
     super.key,
     required this.onPressed,
-    required this.leftWidget,
+    this.leftWidget,
     this.text = 'Continue',
     this.height = 58,
     this.backgroundColor = AppColors.white,
@@ -18,7 +18,7 @@ class WideProceedButton extends StatelessWidget {
   });
 
   final VoidCallback onPressed;
-  final Widget leftWidget;
+  final Widget? leftWidget;
   final String text;
   final double height;
   final Color backgroundColor;
@@ -52,7 +52,7 @@ class WideProceedButton extends StatelessWidget {
             padding: horizontalPadding,
             child: Row(
               children: [
-                leftWidget,
+                leftWidget ?? const SizedBox(width: 40, height: 40),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(

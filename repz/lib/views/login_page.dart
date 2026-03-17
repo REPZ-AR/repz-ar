@@ -88,12 +88,12 @@ class LoginPage extends StatelessWidget {
                         shape: BoxShape.circle,
                         color: Colors.white,
                       ),
-                      child: const Text(
-                        'G',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF4285F4),
+                      child: ClipOval(
+                        child: Image.asset(
+                          'assets/images/google_icon.png',
+                          width: 30,
+                          height: 30,
+                          fit: BoxFit.cover,
                         ),
                       ),
                     ),
