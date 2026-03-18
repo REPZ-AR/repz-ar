@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:repz/config/app_colors.dart';
 import 'package:repz/model/profile.dart';
 import 'package:repz/ui_components/buttons/pill_button.dart';
-import 'package:repz/views/main_page.dart';
+import 'package:repz/views/onboarding/profile_onboarding_page.dart';
 
 class ModeSelectorPage extends StatelessWidget {
   const ModeSelectorPage({
     super.key,
     required this.mode,
     required this.onSelectMode,
+    required this.onCompleteOnboarding,
     required this.isDarkMode,
     required this.onThemeChanged,
     this.userName,
@@ -22,6 +23,7 @@ class ModeSelectorPage extends StatelessWidget {
 
   final ProfileMode? mode;
   final Future<void> Function(ProfileMode mode) onSelectMode;
+  final Future<void> Function(OnboardingFormData data) onCompleteOnboarding;
   final bool isDarkMode;
   final Function(bool) onThemeChanged;
   final String? userName;
@@ -33,14 +35,12 @@ class ModeSelectorPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (mode != null) {
-      return MainPage(
-        isDarkMode: isDarkMode,
-        isCoach: mode == ProfileMode.trainer,
+      return ProfileOnboardingPage(
+        onSubmit: onCompleteOnboarding,
         avatarUrl: avatarUrl,
         userName: userName,
-        userEmail: userEmail,
-        onLogout: onLogout,
-        onThemeChanged: onThemeChanged,
+        isLoading: isLoading,
+        onBack: isLoading ? null : () => onLogout?.call(),
       );
     }
 
