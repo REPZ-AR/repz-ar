@@ -5,6 +5,7 @@ import 'package:repz/repositories/auth_repository.dart';
 import 'package:repz/repositories/profile_repository.dart';
 import 'package:repz/views/main_page.dart';
 import 'package:repz/views/onboarding/mode_selector_page.dart';
+import 'package:repz/views/onboarding/profile_onboarding_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:repz/views/login_page.dart';
 
@@ -195,6 +196,43 @@ class _AuthGateState extends State<AuthGate> {
     }
   }
 
+  Future<void> _completeOnboarding(OnboardingFormData data) async {
+    final userId = _profile?.userId;
+    if (userId == null) {
+      return;
+    }
+
+    setState(() => _profileLoading = true);
+    try {
+      final updated = await _profileRepository.saveOnboarding(
+        userId: userId,
+        birthday: data.birthday,
+        gender: data.gender,
+        heightCm: data.heightCm,
+        weightKg: data.weightKg,
+        experience: data.experience,
+        frequency: data.frequency,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _profile = updated;
+        _profileError = null;
+      });
+    } on PostgrestException catch (error) {
+      _showAuthError(error.message);
+    } catch (_) {
+      _showAuthError('Could not save onboarding details. Please try again.');
+    } finally {
+      if (mounted) {
+        setState(() => _profileLoading = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<AuthState>(
@@ -260,6 +298,7 @@ class _AuthGateState extends State<AuthGate> {
             userName: displayName,
             avatarUrl: avatarUrl,
             onSelectMode: _saveMode,
+            onCompleteOnboarding: _completeOnboarding,
             onLogout: _loading ? null : _signOut,
             isDarkMode: widget.isDarkMode,
             userEmail: user.email,
@@ -286,4 +325,3 @@ class _AuthGateState extends State<AuthGate> {
     );
   }
 }
-

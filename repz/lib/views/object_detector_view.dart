@@ -22,7 +22,7 @@ class _ObjectDetectorView extends State<ObjectDetectorView> {
   int _option = 0;
   final _options = {
     'default': '',
-    'gym_equipment_classifier': 'gym_equipment_classifier.tflite'
+    'gym_equipment_classifier': 'gym_equipment_classifier_mlkit.tflite'
     // 'object_custom': 'object_labeler.tflite',
     // 'fruits': 'object_labeler_fruits.tflite',
     // 'flowers': 'object_labeler_flowers.tflite',
