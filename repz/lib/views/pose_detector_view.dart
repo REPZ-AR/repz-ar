@@ -34,8 +34,9 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
   late int _currentIndex;
   late Exercise _currentExercise;
 
-  final PoseDetector _poseDetector =
-      PoseDetector(options: PoseDetectorOptions(model: PoseDetectionModel.accurate));
+  final PoseDetector _poseDetector = PoseDetector(
+    options: PoseDetectorOptions(model: PoseDetectionModel.accurate),
+  );
   bool _canProcess = true;
   bool _isBusy = false;
   CustomPaint? _customPaint;
@@ -47,7 +48,11 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
   DateTime _lastFeedbackTime = DateTime.now();
   Set<PoseLandmarkType> _currentBadJoints = {};
 
-  final List<String> _activeWorkoutJoints = ['leftShoulder', 'leftElbow', 'leftWrist'];
+  final List<String> _activeWorkoutJoints = [
+    'leftShoulder',
+    'leftElbow',
+    'leftWrist',
+  ];
 
   @override
   void initState() {
@@ -74,7 +79,9 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
       for (var frameData in data) {
         // Assuming your JSON has a 'landmarks' key that maps to the utils.dart structure
         final landmarksMap = frameData['landmarks'] as Map<String, dynamic>;
-        final normalizedFrame = PoseMatcher.normalizeBaselineFrame(landmarksMap);
+        final normalizedFrame = PoseMatcher.normalizeBaselineFrame(
+          landmarksMap,
+        );
 
         if (normalizedFrame != null) {
           tempNormalized.add(normalizedFrame);
@@ -85,12 +92,13 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
         _normalizedBaseline = tempNormalized;
         _isBaselineLoaded = true;
       });
-      print("Baseline loaded and normalized: ${_normalizedBaseline.length} frames.");
+      print(
+        "Baseline loaded and normalized: ${_normalizedBaseline.length} frames.",
+      );
     } catch (e) {
       print("Error loading baseline: $e");
     }
   }
-
 
   @override
   void dispose() {
@@ -118,8 +126,8 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
             decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(20)
+              color: Colors.black54,
+              borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               _currentExercise.name,
@@ -145,12 +153,13 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
           ),
           onPressed: _nextExercise,
           icon: const Icon(Icons.skip_next),
-          label: const Text('Next', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          label: const Text(
+            'Next',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
         ),
       ),
     );
-
-
   }
 
   Future<void> _processImage(InputImage inputImage) async {
@@ -170,47 +179,31 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
       if (normalizedLive != null) {
         // 2. Find closest baseline frame index
         final closestIndex = PoseMatcher.findClosestFrameIndex(
-            normalizedLive,
-            _normalizedBaseline,
-            _activeWorkoutJoints
+          normalizedLive,
+          _normalizedBaseline,
+          _activeWorkoutJoints,
         );
 
         if (closestIndex != -1) {
           // 3. We found a match! Provide visual text feedback
-          _text = 'Matched Baseline Frame: $closestIndex / ${_normalizedBaseline.length}\n';
+          _text =
+              'Matched Baseline Frame: $closestIndex / ${_normalizedBaseline.length}\n';
 
-          if (poses.isNotEmpty && _isBaselineLoaded) {
-            final currentPose = poses.first;
+          final matchedBaselineFrame = _normalizedBaseline[closestIndex];
 
-            // 1. Normalize the live frame
-            final normalizedLive = PoseMatcher.normalizeLivePose(currentPose);
+          WorkoutFeedback feedback = WorkoutAnalyzer.analyze(
+            _currentExercise.type,
+            normalizedLive,
+            matchedBaselineFrame,
+          );
 
-            if (normalizedLive != null) {
-              // 2. Find closest baseline frame index
-              final closestIndex = PoseMatcher.findClosestFrameIndex(
-                  normalizedLive,
-                  _normalizedBaseline,
-                  _activeWorkoutJoints
-              );
-
-              if (closestIndex != -1) {
-                final matchedBaselineFrame = _normalizedBaseline[closestIndex];
-
-                WorkoutFeedback feedback = WorkoutAnalyzer.analyze(
-                    _currentExercise.type,
-                    normalizedLive,
-                    matchedBaselineFrame
-                );
-
-                // 4. Update the UI Text
-                final now = DateTime.now();
-                if (now.difference(_lastFeedbackTime).inMilliseconds > 400) {
-                  _text = 'Match: $closestIndex / ${_normalizedBaseline.length}\nFeedback: ${feedback.message}';
-                  _currentBadJoints = feedback.badJoints;
-                  _lastFeedbackTime = now;
-                }
-              }
-            }
+          // 4. Update the UI Text
+          final now = DateTime.now();
+          if (now.difference(_lastFeedbackTime).inMilliseconds > 400) {
+            _text =
+                'Match: $closestIndex / ${_normalizedBaseline.length}\nFeedback: ${feedback.message}';
+            _currentBadJoints = feedback.badJoints;
+            _lastFeedbackTime = now;
           }
         }
       }
