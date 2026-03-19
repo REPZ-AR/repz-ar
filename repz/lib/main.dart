@@ -3,13 +3,9 @@ import 'package:repz/config/app_config.dart';
 import 'package:repz/model/profile.dart';
 import 'package:repz/repositories/auth_repository.dart';
 import 'package:repz/repositories/profile_repository.dart';
-import 'package:repz/views/activity_page.dart';
-import 'package:repz/views/client_management.dart';
-import 'package:repz/views/feed_page.dart';
-import 'package:repz/views/home_page.dart';
-import 'package:repz/views/menu_page.dart';
-import 'package:repz/views/object_detector_view.dart';
-import 'package:repz/views/trainer_management.dart';
+import 'package:repz/views/main_page.dart';
+import 'package:repz/views/onboarding/mode_selector_page.dart';
+import 'package:repz/views/onboarding/profile_onboarding_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:repz/views/login_page.dart';
 
@@ -37,7 +33,6 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   bool isDarkMode = true;
-  bool isCoach = true;
 
   @override
   Widget build(BuildContext context) {
@@ -58,7 +53,6 @@ class _MyAppState extends State<MyApp> {
       themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
       home: AuthGate(
         isDarkMode: isDarkMode,
-        isCoach: isCoach,
         onThemeChanged: (bool value) {
           setState(() {
             isDarkMode = value;
@@ -71,13 +65,11 @@ class _MyAppState extends State<MyApp> {
 
 class AuthGate extends StatefulWidget {
   final bool isDarkMode;
-  final bool isCoach;
   final Function(bool) onThemeChanged;
 
   const AuthGate({
     Key? key,
     required this.isDarkMode,
-    required this.isCoach,
     required this.onThemeChanged,
   }) : super(key: key);
 
@@ -175,7 +167,7 @@ class _AuthGateState extends State<AuthGate> {
     }
   }
 
-  Future<void> _markFirstTimeComplete() async {
+  Future<void> _saveMode(ProfileMode mode) async {
     final userId = _profile?.userId;
     if (userId == null) {
       return;
@@ -183,7 +175,7 @@ class _AuthGateState extends State<AuthGate> {
 
     setState(() => _profileLoading = true);
     try {
-      final updated = await _profileRepository.markFirstTimeComplete(userId);
+      final updated = await _profileRepository.saveMode(userId, mode);
 
       if (!mounted) {
         return;
@@ -196,7 +188,44 @@ class _AuthGateState extends State<AuthGate> {
     } on PostgrestException catch (error) {
       _showAuthError(error.message);
     } catch (_) {
-      _showAuthError('Could not complete setup. Please try again.');
+      _showAuthError('Could not save your role. Please try again.');
+    } finally {
+      if (mounted) {
+        setState(() => _profileLoading = false);
+      }
+    }
+  }
+
+  Future<void> _completeOnboarding(OnboardingFormData data) async {
+    final userId = _profile?.userId;
+    if (userId == null) {
+      return;
+    }
+
+    setState(() => _profileLoading = true);
+    try {
+      final updated = await _profileRepository.saveOnboarding(
+        userId: userId,
+        birthday: data.birthday,
+        gender: data.gender,
+        heightCm: data.heightCm,
+        weightKg: data.weightKg,
+        experience: data.experience,
+        frequency: data.frequency,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _profile = updated;
+        _profileError = null;
+      });
+    } on PostgrestException catch (error) {
+      _showAuthError(error.message);
+    } catch (_) {
+      _showAuthError('Could not save onboarding details. Please try again.');
     } finally {
       if (mounted) {
         setState(() => _profileLoading = false);
@@ -243,10 +272,7 @@ class _AuthGateState extends State<AuthGate> {
                   children: [
                     const Text('Could not load profile.'),
                     const SizedBox(height: 12),
-                    Text(
-                      _profileError!,
-                      textAlign: TextAlign.center,
-                    ),
+                    Text(_profileError!, textAlign: TextAlign.center),
                     const SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: () => _loadProfileFlag(user),
@@ -260,20 +286,35 @@ class _AuthGateState extends State<AuthGate> {
         }
 
         if (_profile?.userId == user.id && _profile?.firstTime == true) {
-          return FirstTimeSetupView(
+          final metadata = user.userMetadata;
+          final avatarUrl = metadata?['avatar_url'] as String?;
+          final displayName =
+              (metadata?['full_name'] as String?) ??
+              (metadata?['name'] as String?);
+
+          return ModeSelectorPage(
+            mode: _profile!.mode,
             isLoading: _profileLoading,
-            onContinue: _markFirstTimeComplete,
+            userName: displayName,
+            avatarUrl: avatarUrl,
+            onSelectMode: _saveMode,
+            onCompleteOnboarding: _completeOnboarding,
             onLogout: _loading ? null : _signOut,
+            isDarkMode: widget.isDarkMode,
+            userEmail: user.email,
+            onThemeChanged: widget.onThemeChanged,
           );
         }
 
         final metadata = user.userMetadata;
         final avatarUrl = metadata?['avatar_url'] as String?;
-        final displayName = (metadata?['full_name'] as String?) ??
+        final displayName =
+            (metadata?['full_name'] as String?) ??
             (metadata?['name'] as String?);
+        final isCoach = _profile?.mode == ProfileMode.trainer;
         return MainPage(
           isDarkMode: widget.isDarkMode,
-          isCoach: widget.isCoach,
+          isCoach: isCoach,
           avatarUrl: avatarUrl,
           userName: displayName,
           userEmail: user.email,
@@ -284,196 +325,3 @@ class _AuthGateState extends State<AuthGate> {
     );
   }
 }
-
-class MainPage extends StatefulWidget {
-  final bool isDarkMode;
-  final bool isCoach;
-  final String? avatarUrl;
-  final String? userName;
-  final String? userEmail;
-  final Future<void> Function()? onLogout;
-  final Function(bool) onThemeChanged;
-
-  const MainPage({
-    Key? key,
-    required this.isDarkMode,
-    required this.isCoach,
-    required this.onThemeChanged,
-    this.avatarUrl,
-    this.userName,
-    this.userEmail,
-    this.onLogout,
-  }) : super(key: key);
-
-  @override
-  State<MainPage> createState() => _MainPageState();
-}
-
-class _MainPageState extends State<MainPage> {
-  int _selectedIndex = 0;
-
-  late List<Widget> _pages;
-
-  @override
-  void initState() {
-    super.initState();
-    _buildPages();
-  }
-
-  void _buildPages() {
-    _pages = [
-      HomePage(isDarkMode: widget.isDarkMode, avatarUrl: widget.avatarUrl),
-      widget.isCoach
-          ? ClientManagementPage(isDarkMode: widget.isDarkMode)
-          : TrainerManagementPage(isDarkMode: widget.isDarkMode, isCoach: false,),
-      ObjectDetectorView(),
-      FeedPage(isDarkMode: widget.isDarkMode),
-      MenuPage(
-        isDarkMode: widget.isDarkMode,
-        avatarUrl: widget.avatarUrl,
-        userName: widget.userName,
-        userEmail: widget.userEmail,
-        onLogout: widget.onLogout,
-        onThemeChanged: widget.onThemeChanged,
-      ),
-    ];
-  }
-
-  @override
-  void didUpdateWidget(MainPage oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.isDarkMode != widget.isDarkMode || oldWidget.avatarUrl != widget.avatarUrl) {
-      _buildPages();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final accentColor = widget.isDarkMode
-        ? const Color(0xFFCFF500)
-        : const Color(0xFFA66CFF);
-
-    return Scaffold(
-      body: _pages[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-        type: BottomNavigationBarType.fixed,
-        items: [
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home, color: accentColor),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.search_outlined),
-            activeIcon: Icon(Icons.search, color: accentColor),
-            label: widget.isCoach ? 'Clients' : 'Trainers',
-          ),
-          BottomNavigationBarItem(
-            icon: Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: accentColor,
-                  width: 4,
-                ),
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: widget.isDarkMode ? Colors.white : Colors.black,
-                    width: 2.5,
-                  ),
-                ),
-                child: Icon(
-                  Icons.camera_alt,
-                  color: accentColor,
-                  size: 28,
-                ),
-              ),
-            ),
-            label: '',
-          ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.folder_outlined),
-            activeIcon: Icon(Icons.folder, color: accentColor),
-            label: 'Feed',
-          ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.menu_outlined),
-            activeIcon: Icon(Icons.menu, color: accentColor),
-            label: 'Menu',
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class FirstTimeSetupView extends StatelessWidget {
-  final bool isLoading;
-  final Future<void> Function() onContinue;
-  final Future<void> Function()? onLogout;
-
-  const FirstTimeSetupView({
-    Key? key,
-    required this.isLoading,
-    required this.onContinue,
-    this.onLogout,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Welcome to Repz',
-                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'This is a temporary first-time setup view. Continue to enter the app.',
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: isLoading ? null : onContinue,
-                    child: isLoading
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Continue'),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextButton(
-                  onPressed: isLoading ? null : onLogout,
-                  child: const Text('Logout'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
