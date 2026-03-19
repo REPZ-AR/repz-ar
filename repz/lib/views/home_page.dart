@@ -1,21 +1,51 @@
 import 'package:flutter/material.dart';
+import 'package:repz/views/pose_detector_view.dart';
 
-class HomePage extends StatelessWidget {
+import '../model/workout.dart';
+
+class HomePage extends StatefulWidget {
   final bool isDarkMode;
   final String? avatarUrl;
 
-  const HomePage({
-    Key? key,
+  HomePage({Key? key,
     required this.isDarkMode,
     this.avatarUrl,
   }) : super(key: key);
 
   @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+
+  int _currentWorkoutIndex = 0;
+
+  final List<Exercise> todaysPlan = [
+    Exercise(
+      name: 'Bicep Curls',
+      duration: '10 min',
+      sets: '5 sets',
+      type: WorkoutType.curls,
+      assetPath: 'assets/data/baseline_curls.json',
+      targetJoints: ['leftShoulder', 'leftElbow', 'leftWrist'],
+    ),
+    Exercise(
+      name: 'Lateral Raises',
+      duration: '5 min',
+      sets: '3 sets',
+      type: WorkoutType.curls,
+      assetPath: 'assets/data/baseline_curls.json',
+      targetJoints: ['leftShoulder', 'leftElbow'],
+    ),
+  ];
+
+
+  @override
   Widget build(BuildContext context) {
-    final accentColor =
-        isDarkMode ? const Color(0xFFCFF500) : const Color(0xFFA66CFF);
-    final cardColor = isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
-    final textColor = isDarkMode ? Colors.white : Colors.black;
+    final featuredExercise = todaysPlan[_currentWorkoutIndex];;
+    final accentColor = widget.isDarkMode ? const Color(0xFFCFF500) : const Color(0xFFA66CFF);
+    final cardColor = widget.isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
+    final textColor = widget.isDarkMode ? Colors.white : Colors.black;
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -38,10 +68,10 @@ class HomePage extends StatelessWidget {
                   radius: 20,
                   backgroundColor: accentColor,
                   backgroundImage:
-                      (avatarUrl != null && avatarUrl!.isNotEmpty)
-                          ? NetworkImage(avatarUrl!)
+                      (widget.avatarUrl != null && widget.avatarUrl!.isNotEmpty)
+                          ? NetworkImage(widget.avatarUrl!)
                           : null,
-                  child: (avatarUrl == null || avatarUrl!.isEmpty)
+                  child: (widget.avatarUrl == null || widget.avatarUrl!.isEmpty)
                       ? const Icon(
                           Icons.person,
                           color: Colors.black,
@@ -53,71 +83,86 @@ class HomePage extends StatelessWidget {
             const SizedBox(height: 20),
 
             // Today's workout card
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: cardColor,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: accentColor,
-                  width: 2,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: cardColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: accentColor, width: 2),
+          ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Chest Day',
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineSmall
-                                ?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: textColor,
-                                ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '• Intensity: High\n• Duration: 30min',
-                            style: TextStyle(
-                              color: Colors.grey[500],
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
+                      Text(
+                        featuredExercise.name,
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: textColor,
+                        ),
                       ),
-                      Container(
-                        width: 60,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          color: accentColor,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.play_arrow,
-                          color: Colors.black,
-                          size: 32,
-                        ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '• Intensity: High\n• Duration: ${featuredExercise.duration}',
+                        style: TextStyle(color: Colors.grey[500], fontSize: 12),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  _ExerciseItem('Chest Press', '10 min', '5 sets'),
-                  const SizedBox(height: 8),
-                  _ExerciseItem('Chest Press', '5 min', '5 sets'),
-                  const SizedBox(height: 8),
-                  _ExerciseItem('Chest Press', '10 min', '5 sets'),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PoseDetectorView(
+                            exercises: todaysPlan,
+                            initialIndex: _currentWorkoutIndex,
+                            onProgressSaved: (savedIndex) {
+                              Future.microtask(() {
+                                if (mounted) {
+                                  setState(() {
+                                    _currentWorkoutIndex = savedIndex;
+                                  });
+                                }
+                              });
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(color: accentColor, shape: BoxShape.circle),
+                      child: const Icon(Icons.play_arrow, color: Colors.black, size: 32),
+                    ),
+                  ),
                 ],
               ),
-            ),
-            const SizedBox(height: 20),
-
+              const SizedBox(height: 16),
+              // workout list
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 200),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: todaysPlan.length,
+                  itemBuilder: (context, index) {
+                    final ex = todaysPlan[index];
+                    final isCompleted = index < _currentWorkoutIndex;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6.0),
+                      child: _ExerciseItem(ex.name, ex.duration, ex.sets),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
             // Stats row
             Row(
               children: [
@@ -126,7 +171,7 @@ class HomePage extends StatelessWidget {
                     title: 'Workouts\nCompleted',
                     value: '4/6',
                     accentColor: accentColor,
-                    isDarkMode: isDarkMode,
+                    isDarkMode: widget.isDarkMode,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -135,7 +180,7 @@ class HomePage extends StatelessWidget {
                     title: 'Streak\nScore',
                     value: '75',
                     accentColor: accentColor,
-                    isDarkMode: isDarkMode,
+                    isDarkMode: widget.isDarkMode,
                   ),
                 ),
               ],
@@ -150,7 +195,7 @@ class HomePage extends StatelessWidget {
                     title: 'Next Rest in',
                     value: '2',
                     subtitle: 'Days',
-                    isDarkMode: isDarkMode,
+                    isDarkMode: widget.isDarkMode,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -159,7 +204,7 @@ class HomePage extends StatelessWidget {
                     title: 'Calory\nGoal',
                     value: '350',
                     subtitle: '',
-                    isDarkMode: isDarkMode,
+                    isDarkMode: widget.isDarkMode,
                   ),
                 ),
               ],

@@ -9,22 +9,38 @@ import 'package:repz/views/utils/logger.dart';
 import 'package:repz/views/utils/pose_utils.dart';
 import 'package:repz/views/utils/workout_analyzer.dart';
 
+import '../model/workout.dart';
 import 'detector_view.dart';
 import 'painters/pose_painter.dart';
 
 class PoseDetectorView extends StatefulWidget {
+  final List<Exercise> exercises;
+  final int initialIndex;
+  final Function(int)? onProgressSaved;
+
+  const PoseDetectorView({
+    super.key,
+    required this.exercises,
+    this.initialIndex = 0,
+    this.onProgressSaved,
+  });
+
   @override
   State<StatefulWidget> createState() => _PoseDetectorViewState();
 }
 
 class _PoseDetectorViewState extends State<PoseDetectorView> {
+  final GlobalKey _nextButtonKey = GlobalKey();
+  late int _currentIndex;
+  late Exercise _currentExercise;
+
   final PoseDetector _poseDetector =
       PoseDetector(options: PoseDetectorOptions(model: PoseDetectionModel.accurate));
   bool _canProcess = true;
   bool _isBusy = false;
   CustomPaint? _customPaint;
   String? _text;
-  var _cameraLensDirection = CameraLensDirection.back;
+  var _cameraLensDirection = CameraLensDirection.front;
   PoseLogger _logger = PoseLogger();
   List<Map<String, Offset>> _normalizedBaseline = [];
   bool _isBaselineLoaded = false;
@@ -36,7 +52,16 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
   @override
   void initState() {
     super.initState();
-    _loadAndNormalizeBaseline('assets/data/baseline_curls.json'); // Path to your JSON
+    _currentIndex = widget.initialIndex;
+    _loadExercise(_currentIndex);
+  }
+
+  void _loadExercise(int index) {
+    setState(() {
+      _isBaselineLoaded = false;
+      _currentExercise = widget.exercises[index];
+    });
+    _loadAndNormalizeBaseline(_currentExercise.assetPath);
   }
 
   Future<void> _loadAndNormalizeBaseline(String path) async {
@@ -68,7 +93,8 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
 
 
   @override
-  void dispose() async {
+  void dispose() {
+    widget.onProgressSaved?.call(_currentIndex);
     _canProcess = false;
     _poseDetector.close();
     super.dispose();
@@ -83,7 +109,48 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
       onImage: _processImage,
       initialCameraLensDirection: _cameraLensDirection,
       onCameraLensDirectionChanged: (value) => _cameraLensDirection = value,
+
+      customTopWidget: Positioned(
+        top: 50,
+        left: 0,
+        right: 0,
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(20)
+            ),
+            child: Text(
+              _currentExercise.name,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ),
+
+      customBottomWidget: Positioned(
+        key: _nextButtonKey,
+        bottom: 80,
+        right: 16,
+        child: ElevatedButton.icon(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFCFF500), // Theme Accent Color
+            foregroundColor: Colors.black,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          ),
+          onPressed: _nextExercise,
+          icon: const Icon(Icons.skip_next),
+          label: const Text('Next', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        ),
+      ),
     );
+
+
   }
 
   Future<void> _processImage(InputImage inputImage) async {
@@ -129,8 +196,11 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
               if (closestIndex != -1) {
                 final matchedBaselineFrame = _normalizedBaseline[closestIndex];
 
-                // 3. Call the Angle Comparison Logic
-                WorkoutFeedback feedback = WorkoutAnalyzer.compareCurlAngles(normalizedLive, matchedBaselineFrame);
+                WorkoutFeedback feedback = WorkoutAnalyzer.analyze(
+                    _currentExercise.type,
+                    normalizedLive,
+                    matchedBaselineFrame
+                );
 
                 // 4. Update the UI Text
                 final now = DateTime.now();
@@ -164,6 +234,20 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
     _isBusy = false;
     if (mounted) {
       setState(() {});
+    }
+  }
+
+  void _nextExercise() {
+    if (_currentIndex < widget.exercises.length - 1) {
+      setState(() {
+        _currentIndex++;
+      });
+      _loadExercise(_currentIndex);
+    } else {
+      setState(() {
+        _currentIndex = 0; // Reset index to the start for next time
+      });
+      Navigator.pop(context);
     }
   }
 }
