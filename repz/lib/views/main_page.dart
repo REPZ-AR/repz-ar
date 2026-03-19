@@ -6,6 +6,8 @@ import 'package:repz/views/home_page.dart';
 import 'package:repz/views/menu_page.dart';
 import 'package:repz/views/trainer_management.dart';
 
+import 'object_detector_view.dart';
+
 class MainPage extends StatefulWidget {
   final bool isDarkMode;
   final bool isCoach;
@@ -50,7 +52,7 @@ class _MainPageState extends State<MainPage> {
             isDarkMode: widget.isDarkMode,
             isCoach: false,
           ),
-      const ActivityPage(),
+      ObjectDetectorView(),
       FeedPage(isDarkMode: widget.isDarkMode),
       MenuPage(
         isDarkMode: widget.isDarkMode,
