@@ -332,8 +332,8 @@ class _ProfileOnboardingPageState extends State<ProfileOnboardingPage> {
                 textColor: AppColors.white,
                 arrowBackgroundColor: AppColors.accent,
                 arrowIconColor: AppColors.black,
-                onPressed:
-                    (!widget.isLoading && _canContinue) ? _submit : () {},
+                enabled: !widget.isLoading && _canContinue,
+                onPressed: _submit,
               ),
             ],
           ),

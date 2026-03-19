@@ -13,8 +13,10 @@ class WideProceedButton extends StatelessWidget {
     this.textColor = AppColors.black,
     this.arrowBackgroundColor = AppColors.accent,
     this.arrowIconColor = AppColors.black,
-    this.arrowIcon = Icons.arrow_forward,
+    this.arrowIcon = Icons.arrow_forward_rounded,
+    this.arrowIconSize = 20,
     this.horizontalPadding = const EdgeInsets.symmetric(horizontal: 14),
+    this.enabled = true,
   });
 
   final VoidCallback onPressed;
@@ -26,20 +28,27 @@ class WideProceedButton extends StatelessWidget {
   final Color arrowBackgroundColor;
   final Color arrowIconColor;
   final IconData arrowIcon;
+  final double arrowIconSize;
   final EdgeInsetsGeometry horizontalPadding;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
+    final effectiveBackgroundColor = enabled ? backgroundColor : backgroundColor.withOpacity(0.6);
+    final effectiveTextColor = enabled ? textColor : textColor.withOpacity(0.5);
+    final effectiveArrowBgColor = enabled ? arrowBackgroundColor : arrowBackgroundColor.withOpacity(0.5);
+    final effectiveArrowIconColor = enabled ? arrowIconColor : arrowIconColor.withOpacity(0.5);
+
     return Container(
       height: height,
       decoration: BoxDecoration(
-        color: backgroundColor,
+        color: effectiveBackgroundColor,
         borderRadius: BorderRadius.circular(999),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: AppColors.shadowSoft,
+            color: AppColors.shadowSoft.withOpacity(enabled ? 1.0 : 0.5),
             blurRadius: 12,
-            offset: Offset(0, 6),
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -47,7 +56,7 @@ class WideProceedButton extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(999),
-          onTap: onPressed,
+          onTap: enabled ? onPressed : null,
           child: Padding(
             padding: horizontalPadding,
             child: Row(
@@ -62,7 +71,7 @@ class WideProceedButton extends StatelessWidget {
                       fontFamily: 'Inter',
                       fontWeight: FontWeight.w700,
                       fontSize: 16,
-                      color: textColor,
+                      color: effectiveTextColor,
                     ),
                   ),
                 ),
@@ -72,12 +81,12 @@ class WideProceedButton extends StatelessWidget {
                   height: 40,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: arrowBackgroundColor,
+                    color: effectiveArrowBgColor,
                   ),
                   child: Icon(
                     arrowIcon,
-                    color: arrowIconColor,
-                    size: 22,
+                    color: effectiveArrowIconColor,
+                    size: arrowIconSize,
                   ),
                 ),
               ],
