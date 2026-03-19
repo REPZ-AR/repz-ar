@@ -1,4 +1,4 @@
-name: Dart
+name: Flutter
 on:
   push:
     branches: [ "master" ]
@@ -12,10 +12,12 @@ jobs:
         working-directory: repz
     steps:
       - uses: actions/checkout@v4
-      - uses: dart-lang/setup-dart@9a04e6d73cca37bd455e0608d7e5092f881fd603
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
       - name: Install dependencies
-        run: dart pub get
+        run: flutter pub get
       - name: Analyze project source
-        run: dart analyze
+        run: flutter analyze
       - name: Run tests
-        run: dart test
+        run: flutter test
