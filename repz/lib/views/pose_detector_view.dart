@@ -5,6 +5,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
+import 'package:repz/model/coordinate_point.dart';
 import 'package:repz/views/utils/logger.dart';
 import 'package:repz/views/utils/pose_utils.dart';
 import 'package:repz/views/utils/workout_analyzer.dart';
@@ -33,6 +34,7 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
   final GlobalKey _nextButtonKey = GlobalKey();
   late int _currentIndex;
   late Exercise _currentExercise;
+  int _lastMatchedIndex = -1;
 
   final PoseDetector _poseDetector = PoseDetector(
     options: PoseDetectorOptions(model: PoseDetectionModel.accurate),
@@ -43,7 +45,7 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
   String? _text;
   var _cameraLensDirection = CameraLensDirection.front;
   PoseLogger _logger = PoseLogger();
-  List<Map<String, Offset>> _normalizedBaseline = [];
+  List<Map<String, Point3D>> _normalizedBaseline = [];
   bool _isBaselineLoaded = false;
   DateTime _lastFeedbackTime = DateTime.now();
   Set<PoseLandmarkType> _currentBadJoints = {};
@@ -74,7 +76,7 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
       final String response = await rootBundle.loadString(path);
       final List<dynamic> data = json.decode(response);
 
-      List<Map<String, Offset>> tempNormalized = [];
+      List<Map<String, Point3D>> tempNormalized = [];
 
       for (var frameData in data) {
         // Assuming your JSON has a 'landmarks' key that maps to the utils.dart structure
@@ -182,10 +184,11 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
           normalizedLive,
           _normalizedBaseline,
           _activeWorkoutJoints,
+            _lastMatchedIndex
         );
 
         if (closestIndex != -1) {
-          // 3. We found a match! Provide visual text feedback
+          _lastMatchedIndex = closestIndex;
           _text =
               'Matched Baseline Frame: $closestIndex / ${_normalizedBaseline.length}\n';
 
@@ -231,6 +234,7 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
   }
 
   void _nextExercise() {
+    _lastMatchedIndex = -1;
     if (_currentIndex < widget.exercises.length - 1) {
       setState(() {
         _currentIndex++;
