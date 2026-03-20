@@ -34,10 +34,10 @@ class WideProceedButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveBackgroundColor = enabled ? backgroundColor : backgroundColor.withOpacity(0.6);
-    final effectiveTextColor = enabled ? textColor : textColor.withOpacity(0.5);
-    final effectiveArrowBgColor = enabled ? arrowBackgroundColor : arrowBackgroundColor.withOpacity(0.5);
-    final effectiveArrowIconColor = enabled ? arrowIconColor : arrowIconColor.withOpacity(0.5);
+    final effectiveBackgroundColor = enabled ? backgroundColor : backgroundColor.withValues(alpha: 0.6);
+    final effectiveTextColor = enabled ? textColor : textColor.withValues(alpha: 0.5);
+    final effectiveArrowBgColor = enabled ? arrowBackgroundColor : arrowBackgroundColor.withValues(alpha: 0.5);
+    final effectiveArrowIconColor = enabled ? arrowIconColor : arrowIconColor.withValues(alpha: 0.5);
 
     return Container(
       height: height,
@@ -46,7 +46,7 @@ class WideProceedButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         boxShadow: [
           BoxShadow(
-            color: AppColors.shadowSoft.withOpacity(enabled ? 1.0 : 0.5),
+            color: AppColors.shadowSoft.withValues(alpha: enabled ? 1.0 : 0.5),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),

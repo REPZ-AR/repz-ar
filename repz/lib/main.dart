@@ -9,6 +9,82 @@ import 'package:repz/views/onboarding/profile_onboarding_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:repz/views/login_page.dart';
 
+abstract class AuthGateway {
+  Stream<AuthState> get onAuthStateChange;
+  Session? get currentSession;
+  Future<void> signInWithGoogle();
+  Future<void> signOut();
+}
+
+class AuthRepositoryGateway implements AuthGateway {
+  AuthRepositoryGateway({AuthRepository? repository})
+    : _repository = repository ?? AuthRepository();
+
+  final AuthRepository _repository;
+
+  @override
+  Stream<AuthState> get onAuthStateChange => _repository.onAuthStateChange;
+
+  @override
+  Session? get currentSession => _repository.currentSession;
+
+  @override
+  Future<void> signInWithGoogle() => _repository.signInWithGoogle();
+
+  @override
+  Future<void> signOut() => _repository.signOut();
+}
+
+abstract class ProfileGateway {
+  Future<Profile?> fetchProfile(String userId);
+  Future<Profile> saveMode(String userId, ProfileMode mode);
+  Future<Profile> saveOnboarding({
+    required String userId,
+    required DateTime birthday,
+    required String gender,
+    required double heightCm,
+    required double weightKg,
+    required ExperienceLevel experience,
+    required int frequency,
+  });
+}
+
+class ProfileRepositoryGateway implements ProfileGateway {
+  ProfileRepositoryGateway({ProfileRepository? repository})
+    : _repository = repository ?? ProfileRepository();
+
+  final ProfileRepository _repository;
+
+  @override
+  Future<Profile?> fetchProfile(String userId) =>
+      _repository.fetchProfile(userId);
+
+  @override
+  Future<Profile> saveMode(String userId, ProfileMode mode) =>
+      _repository.saveMode(userId, mode);
+
+  @override
+  Future<Profile> saveOnboarding({
+    required String userId,
+    required DateTime birthday,
+    required String gender,
+    required double heightCm,
+    required double weightKg,
+    required ExperienceLevel experience,
+    required int frequency,
+  }) {
+    return _repository.saveOnboarding(
+      userId: userId,
+      birthday: birthday,
+      gender: gender,
+      heightCm: heightCm,
+      weightKg: weightKg,
+      experience: experience,
+      frequency: frequency,
+    );
+  }
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   AppConfig.validate();
@@ -66,11 +142,15 @@ class _MyAppState extends State<MyApp> {
 class AuthGate extends StatefulWidget {
   final bool isDarkMode;
   final Function(bool) onThemeChanged;
+  final AuthGateway? authGateway;
+  final ProfileGateway? profileGateway;
 
   const AuthGate({
     Key? key,
     required this.isDarkMode,
     required this.onThemeChanged,
+    this.authGateway,
+    this.profileGateway,
   }) : super(key: key);
 
   @override
@@ -83,13 +163,15 @@ class _AuthGateState extends State<AuthGate> {
   Profile? _profile;
   String? _profileError;
 
-  final _authRepository = AuthRepository();
-  final _profileRepository = ProfileRepository();
+  late final AuthGateway _authGateway =
+      widget.authGateway ?? AuthRepositoryGateway();
+  late final ProfileGateway _profileGateway =
+      widget.profileGateway ?? ProfileRepositoryGateway();
 
   Future<void> _signInWithGoogle() async {
     setState(() => _loading = true);
     try {
-      await _authRepository.signInWithGoogle();
+      await _authGateway.signInWithGoogle();
     } on AuthException catch (error) {
       _showAuthError(error.message);
     } catch (_) {
@@ -104,7 +186,7 @@ class _AuthGateState extends State<AuthGate> {
   Future<void> _signOut() async {
     setState(() => _loading = true);
     try {
-      await _authRepository.signOut();
+      await _authGateway.signOut();
     } on AuthException catch (error) {
       _showAuthError(error.message);
     } catch (_) {
@@ -137,7 +219,7 @@ class _AuthGateState extends State<AuthGate> {
     });
 
     try {
-      final profile = await _profileRepository.fetchProfile(user.id);
+      final profile = await _profileGateway.fetchProfile(user.id);
 
       if (!mounted) {
         return;
@@ -175,7 +257,7 @@ class _AuthGateState extends State<AuthGate> {
 
     setState(() => _profileLoading = true);
     try {
-      final updated = await _profileRepository.saveMode(userId, mode);
+      final updated = await _profileGateway.saveMode(userId, mode);
 
       if (!mounted) {
         return;
@@ -204,7 +286,7 @@ class _AuthGateState extends State<AuthGate> {
 
     setState(() => _profileLoading = true);
     try {
-      final updated = await _profileRepository.saveOnboarding(
+      final updated = await _profileGateway.saveOnboarding(
         userId: userId,
         birthday: data.birthday,
         gender: data.gender,
@@ -236,10 +318,10 @@ class _AuthGateState extends State<AuthGate> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<AuthState>(
-      stream: _authRepository.onAuthStateChange,
+      stream: _authGateway.onAuthStateChange,
       initialData: AuthState(
         AuthChangeEvent.initialSession,
-        _authRepository.currentSession,
+        _authGateway.currentSession,
       ),
       builder: (context, snapshot) {
         final session = snapshot.data?.session;
