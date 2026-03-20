@@ -18,6 +18,6 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
       - name: Analyze project source
-        run: flutter analyze --no-fatal-warnings --no-fatal-info
+        run: flutter analyze --no-fatal-warnings --no-fatal-infos
       - name: Run tests
         run: flutter test
