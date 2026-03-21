@@ -20,12 +20,12 @@ class _TrainerManagementPageState extends State<TrainerManagementPage> {
 
   // Sample data
   final List<Client> clients = const [
-    Client(name: 'Adam Park', subtitle: 'Active Plan'),
-    Client(name: 'Sarah Johnson', subtitle: 'Premium Member'),
-    Client(name: 'Mike Chen', subtitle: 'Beginner'),
-    Client(name: 'Emma Wilson', subtitle: '3 Months'),
-    Client(name: 'James Smith', subtitle: 'Weight Loss Goal'),
-    Client(name: 'Emma Wales', subtitle: 'Weight Loss Goal'),
+    // Client(name: 'Adam Park', subtitle: 'Active Plan'),
+    // Client(name: 'Sarah Johnson', subtitle: 'Premium Member'),
+    // Client(name: 'Mike Chen', subtitle: 'Beginner'),
+    // Client(name: 'Emma Wilson', subtitle: '3 Months'),
+    // Client(name: 'James Smith', subtitle: 'Weight Loss Goal'),
+    // Client(name: 'Emma Wales', subtitle: 'Weight Loss Goal'),
   ];
 
   @override
