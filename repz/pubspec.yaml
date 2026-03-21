@@ -68,7 +68,7 @@ flutter:
   uses-material-design: true
 
   assets:
-    - ./assets/data/baseline_curls.json
+    - ./assets/data/
     - ./assets/ml/gym_equipment_classifier.tflite
     - ./assets/images/login_bg.png
     - ./assets/images/mode_picker_bg.png
