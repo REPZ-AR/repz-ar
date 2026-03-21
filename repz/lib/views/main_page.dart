@@ -6,6 +6,7 @@ import 'package:repz/views/menu_page.dart';
 import 'package:repz/views/trainer_management.dart';
 import 'package:repz/views/workout_builder_page.dart';
 
+import '../main.dart';
 import 'object_detector_view.dart';
 
 class MainPage extends StatefulWidget {
@@ -14,6 +15,8 @@ class MainPage extends StatefulWidget {
   final String? avatarUrl;
   final String? userName;
   final String? userEmail;
+  final String userId;
+  final WorkoutGateway workoutGateway;
   final Future<void> Function()? onLogout;
   final Function(bool) onThemeChanged;
 
@@ -22,6 +25,8 @@ class MainPage extends StatefulWidget {
     required this.isDarkMode,
     required this.isCoach,
     required this.onThemeChanged,
+    required this.userId,
+    required this.workoutGateway,
     this.avatarUrl,
     this.userName,
     this.userEmail,
@@ -58,7 +63,7 @@ class _MainPageState extends State<MainPage>
 
   void _buildPages() {
     _pages = {
-      0: HomePage(isDarkMode: widget.isDarkMode, avatarUrl: widget.avatarUrl),
+      0: HomePage(isDarkMode: widget.isDarkMode, avatarUrl: widget.avatarUrl, userId: widget.userId, workoutGateway: widget.workoutGateway),
       1: widget.isCoach
           ? ClientManagementPage(isDarkMode: widget.isDarkMode)
           : TrainerManagementPage(
