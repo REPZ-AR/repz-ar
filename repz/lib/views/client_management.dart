@@ -69,7 +69,7 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
           // ── Dark overlay ────────────────────────────────────
           Positioned.fill(
             child: ColoredBox(
-              color: Colors.black.withAlpha(widget.isDarkMode ? 160 : 80),
+              color: Colors.black.withAlpha(widget.isDarkMode ? 200 : 150),
             ),
           ),
 

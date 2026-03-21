@@ -47,6 +47,17 @@ class ClientCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final avatarColor = _avatarColor();
 
+    final primaryTextColor =
+    isDarkMode ? Colors.white : const Color(0xFF1A1A1A);
+    final labelTextColor =
+    isDarkMode ? Colors.white : const Color(0xFF444444);
+    final valueTextColor =
+    isDarkMode ? Colors.white : const Color(0xFF444444);
+    final dividerColor =
+    isDarkMode ? Colors.white24 : const Color(0xFFEEEEEE);
+    final chevronColor =
+    isDarkMode ? Colors.white60 : const Color(0xFFAAAAAA);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: AnimatedContainer(
@@ -109,10 +120,10 @@ class ClientCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(client.name,
-                              style: const TextStyle(
+                              style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
-                                  color: Colors.white)),
+                                  color: primaryTextColor)),
                           const SizedBox(height: 4),
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -135,8 +146,8 @@ class ClientCard extends StatelessWidget {
                     AnimatedRotation(
                       turns: isExpanded ? 0.5 : 0,
                       duration: const Duration(milliseconds: 300),
-                      child: const Icon(Icons.keyboard_arrow_down_rounded,
-                          color: Colors.white70),
+                      child: Icon(Icons.keyboard_arrow_down_rounded,
+                          color: chevronColor),
                     ),
                   ],
                 ),
@@ -154,16 +165,17 @@ class ClientCard extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 child: Column(
                   children: [
-                    const Divider(color: Colors.white24),
+                    Divider(color: dividerColor),
                     const SizedBox(height: 12),
 
-                    _detailRow(Icons.badge_outlined, 'Client ID', client.id),
+                    _detailRow(Icons.badge_outlined, 'Client ID',
+                        client.id, labelTextColor, valueTextColor),
                     const SizedBox(height: 10),
-                    _detailRow(
-                        Icons.category_outlined, 'Type', client.subtitle),
+                    _detailRow(Icons.category_outlined, 'Type',
+                        client.subtitle, labelTextColor, valueTextColor),
                     const SizedBox(height: 10),
-                    _detailRow(
-                        Icons.check_circle_outline, 'Status', 'Active'),
+                    _detailRow(Icons.check_circle_outline, 'Status',
+                        'Active', labelTextColor, valueTextColor),
 
                     const SizedBox(height: 20),
 
@@ -197,20 +209,21 @@ class ClientCard extends StatelessWidget {
     );
   }
 
-  Widget _detailRow(IconData icon, String label, String value) {
+  Widget _detailRow(IconData icon, String label, String value,
+      Color labelColor, Color valueColor) {
     return Row(
       children: [
-        Icon(icon, size: 18, color: Colors.white70),
+        Icon(icon, size: 18, color: labelColor),
         const SizedBox(width: 10),
         Text('$label: ',
-            style: const TextStyle(fontSize: 13, color: Colors.white70)),
+            style: TextStyle(fontSize: 13, color: labelColor)),
         Expanded(
           child: Text(value,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white)),
+                  color: valueColor)),
         ),
       ],
     );
