@@ -3,6 +3,7 @@ import 'package:repz/config/app_config.dart';
 import 'package:repz/model/profile.dart';
 import 'package:repz/repositories/auth_repository.dart';
 import 'package:repz/repositories/profile_repository.dart';
+import 'package:repz/repositories/workout_repository.dart';
 import 'package:repz/views/main_page.dart';
 import 'package:repz/views/onboarding/mode_selector_page.dart';
 import 'package:repz/views/onboarding/profile_onboarding_page.dart';
@@ -85,6 +86,28 @@ class ProfileRepositoryGateway implements ProfileGateway {
   }
 }
 
+abstract class WorkoutGateway {
+  Future<int> fetchWorkoutProgress(String userId);
+  Future<void> syncWorkoutProgress(String userId, int index);
+}
+
+class WorkoutRepositoryGateway implements WorkoutGateway {
+  WorkoutRepositoryGateway({WorkoutRepository? repository})
+  : _repository = repository ?? WorkoutRepository();
+
+  final WorkoutRepository _repository;
+
+  @override
+  Future<int> fetchWorkoutProgress(String userId) {
+    return _repository.fetchWorkoutProgress(userId);
+  }
+
+  @override
+  Future<void> syncWorkoutProgress(String userId, int index) {
+    return _repository.syncWorkoutProgress(userId, index);
+  }
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   AppConfig.validate();
@@ -144,6 +167,7 @@ class AuthGate extends StatefulWidget {
   final Function(bool) onThemeChanged;
   final AuthGateway? authGateway;
   final ProfileGateway? profileGateway;
+  final WorkoutGateway? workoutGateway;
 
   const AuthGate({
     Key? key,
@@ -151,6 +175,7 @@ class AuthGate extends StatefulWidget {
     required this.onThemeChanged,
     this.authGateway,
     this.profileGateway,
+    this.workoutGateway,
   }) : super(key: key);
 
   @override
@@ -167,6 +192,8 @@ class _AuthGateState extends State<AuthGate> {
       widget.authGateway ?? AuthRepositoryGateway();
   late final ProfileGateway _profileGateway =
       widget.profileGateway ?? ProfileRepositoryGateway();
+  late final WorkoutGateway _workoutGateway =
+      widget.workoutGateway ?? WorkoutRepositoryGateway();
 
   Future<void> _signInWithGoogle() async {
     setState(() => _loading = true);
@@ -400,6 +427,8 @@ class _AuthGateState extends State<AuthGate> {
           avatarUrl: avatarUrl,
           userName: displayName,
           userEmail: user.email,
+          userId: user.id,
+          workoutGateway: _workoutGateway,
           onLogout: _loading ? null : _signOut,
           onThemeChanged: widget.onThemeChanged,
         );
