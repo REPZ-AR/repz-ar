@@ -101,6 +101,7 @@ flutter_launcher_icons:
 
 flutter_native_splash:
   color: "#ffffff"
-  image: "assets/icons/repz-dark.png"
+  background_image: "assets/icons/repz-dark.png"
+  fullscreen: true
   android: true
   ios: true
