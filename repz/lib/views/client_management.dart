@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import '../model/client.dart';
+import '../services/client_service.dart';
 import '../widgets/common/client_card.dart';
 import '../widgets/common/tab_selector.dart';
 import '../utils/theme_helper.dart';
 
 class ClientManagementPage extends StatefulWidget {
   final bool isDarkMode;
-
   const ClientManagementPage({Key? key, required this.isDarkMode}) : super(key: key);
 
   @override
@@ -14,18 +14,39 @@ class ClientManagementPage extends StatefulWidget {
 }
 
 class _ClientManagementPageState extends State<ClientManagementPage> {
-  bool isOnlineClients = true;
-  int? selectedClientIndex;
+  bool _isOnlineTab = true;
+  int? _selectedIndex;
+  List<Client> _clients = [];
+  bool _loading = true;
 
-  // Sample data
-  final List<Client> clients = const [
-    Client(name: 'Adam Park', subtitle: 'Active Plan'),
-    Client(name: 'Sarah Johnson', subtitle: 'Premium Member'),
-    Client(name: 'Mike Chen', subtitle: 'Beginner'),
-    Client(name: 'Emma Wilson', subtitle: '3 Months'),
-    Client(name: 'James Smith', subtitle: 'Weight Loss Goal'),
-    Client(name: 'Emma Wales', subtitle: 'Weight Loss Goal'),
-  ];
+  final _service = ClientService();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadClients();
+  }
+
+  Future<void> _loadClients() async {
+    setState(() => _loading = true);
+    try {
+      final clients = await _service.fetchClients(
+        clientType: _isOnlineTab ? 'online' : 'gym',
+      );
+      setState(() => _clients = clients);
+    } finally {
+      setState(() => _loading = false);
+    }
+  }
+
+  // Call this when the tab changes
+  void _onTabChanged(bool isOnline) {
+    setState(() {
+      _isOnlineTab = isOnline;
+      _selectedIndex = null;
+    });
+    _loadClients();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,53 +68,44 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Text(
               'Meet Your Clients',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: textColor,
-              ),
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: textColor),
             ),
           ),
           const SizedBox(height: 20),
-
-          // Tab Buttons
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: TabSelector(
-              isFirstTabSelected: isOnlineClients,
+              isFirstTabSelected: _isOnlineTab,
               firstTabLabel: 'Online Clients',
               secondTabLabel: 'Gym Clients',
-              onTabChanged: (value) => setState(() => isOnlineClients = value),
+              onTabChanged: _onTabChanged,
               accentColor: accentColor,
               secondaryTextColor: secondaryTextColor,
             ),
           ),
           const SizedBox(height: 20),
-
-          // Client List
           Expanded(
-            child: ListView.separated(
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : _clients.isEmpty
+                ? Center(
+              child: Text('No clients yet', style: TextStyle(color: secondaryTextColor)),
+            )
+                : ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              itemCount: clients.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                return ClientCard(
-                  client: clients[index],
-                  isDarkMode: widget.isDarkMode,
-                  accentColor: accentColor,
-                  isHighlighted: selectedClientIndex == index,
-                  onTap: () {
-                    setState(() {
-                      selectedClientIndex = index;
-                    });
-                  },
-                );
-              },
+              itemCount: _clients.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, index) => ClientCard(
+                client: _clients[index],
+                isDarkMode: widget.isDarkMode,
+                accentColor: accentColor,
+                isHighlighted: _selectedIndex == index,
+                onTap: () => setState(() => _selectedIndex = index),
+              ),
             ),
           ),
         ],
