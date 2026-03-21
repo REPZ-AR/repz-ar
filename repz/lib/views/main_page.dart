@@ -66,10 +66,7 @@ class _MainPageState extends State<MainPage>
       0: HomePage(isDarkMode: widget.isDarkMode, avatarUrl: widget.avatarUrl, userId: widget.userId, workoutGateway: widget.workoutGateway),
       1: widget.isCoach
           ? ClientManagementPage(isDarkMode: widget.isDarkMode)
-          : TrainerManagementPage(
-              isDarkMode: widget.isDarkMode,
-              isCoach: false,
-            ),
+          : TrainerManagementPage(isDarkMode: widget.isDarkMode),
       3: FeedPage(isDarkMode: widget.isDarkMode),
       4: MenuPage(
           isDarkMode: widget.isDarkMode,
