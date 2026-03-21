@@ -13,6 +13,8 @@ class ClientManagementPage extends StatefulWidget {
 }
 
 class _ClientManagementPageState extends State<ClientManagementPage> {
+  static const String _bgAsset = 'assets/images/client_ui_image.png';
+
   List<Client> _clients = [];
   bool _loading = true;
   String? _expandedClientId;
@@ -41,108 +43,134 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
     final backgroundColor = AppTheme.getBackgroundColor(widget.isDarkMode) ?? Colors.white;
     final textColor = AppTheme.getTextColor(widget.isDarkMode) ?? Colors.black;
     final secondaryTextColor = AppTheme.getSecondaryTextColor(widget.isDarkMode) ?? Colors.grey;
-    final cardColor = widget.isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5);
+    final cardColor = widget.isDarkMode
+        ? const Color(0xFF1E1E1E).withAlpha(200)
+        : const Color(0xFFF5F5F5).withAlpha(200);
 
     return Scaffold(
       backgroundColor: backgroundColor,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Header ──────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: cardColor,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(Icons.arrow_back_ios_new_rounded,
-                          size: 18, color: textColor),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('My Clients',
-                            style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: textColor,
-                                letterSpacing: -0.5)),
-                        Text('${_clients.length} active clients',
-                            style: TextStyle(
-                                fontSize: 13, color: secondaryTextColor)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // ── Background image ──────────────────────────────────
+          Positioned.fill(
+            child: Image.asset(
+              _bgAsset,
+              fit: BoxFit.cover,
+              errorBuilder: (context, _, __) {
+                return const ColoredBox(color: Colors.black);
+              },
             ),
+          ),
 
-            const SizedBox(height: 24),
+          // ── Dark overlay ──────────────────────────────────────
+          Positioned.fill(
+            child: ColoredBox(
+              color: Colors.black.withAlpha(widget.isDarkMode ? 160 : 80),
+            ),
+          ),
 
-            // ── Client List ──────────────────────────────────────
-            Expanded(
-              child: _loading
-                  ? Center(
-                  child: CircularProgressIndicator(color: accentColor))
-                  : _clients.isEmpty
-                  ? _buildEmptyState(textColor, secondaryTextColor, accentColor)
-                  : RefreshIndicator(
-                onRefresh: _loadClients,
-                color: accentColor,
-                child: ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-                  itemCount: _clients.length,
-                  itemBuilder: (context, index) {
-                    final client = _clients[index];
-                    final isExpanded = _expandedClientId == client.id;
-                    return _ClientTile(
-                      client: client,
-                      isExpanded: isExpanded,
-                      isDarkMode: widget.isDarkMode,
-                      accentColor: accentColor,
-                      textColor: textColor,
-                      secondaryTextColor: secondaryTextColor,
-                      cardColor: cardColor,
-                      onTap: () {
-                        setState(() {
-                          _expandedClientId =
-                          isExpanded ? null : client.id;
-                        });
-                      },
-                      onAddSchedule: () {
-                        // TODO: navigate to schedule page
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                                'Add schedule for ${client.name}'),
-                            backgroundColor: accentColor,
+          // ── Main content ──────────────────────────────────────
+          SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Header ────────────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                  child: Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: cardColor,
+                            borderRadius: BorderRadius.circular(12),
                           ),
+                          child: Icon(Icons.arrow_back_ios_new_rounded,
+                              size: 18, color: textColor),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('My Clients',
+                                style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    letterSpacing: -0.5)),
+                            Text('${_clients.length} active clients',
+                                style: const TextStyle(
+                                    fontSize: 13, color: Colors.white70)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // ── Client List ────────────────────────────────────
+                Expanded(
+                  child: _loading
+                      ? Center(
+                      child: CircularProgressIndicator(color: accentColor))
+                      : _clients.isEmpty
+                      ? _buildEmptyState(accentColor)
+                      : RefreshIndicator(
+                    onRefresh: _loadClients,
+                    color: accentColor,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                      itemCount: _clients.length,
+                      itemBuilder: (context, index) {
+                        final client = _clients[index];
+                        final isExpanded =
+                            _expandedClientId == client.id;
+                        return _ClientTile(
+                          client: client,
+                          isExpanded: isExpanded,
+                          isDarkMode: widget.isDarkMode,
+                          accentColor: accentColor,
+                          textColor: textColor,
+                          secondaryTextColor: secondaryTextColor,
+                          cardColor: cardColor,
+                          onTap: () {
+                            setState(() {
+                              _expandedClientId =
+                              isExpanded ? null : client.id;
+                            });
+                          },
+                          onAddSchedule: () {
+                            ScaffoldMessenger.of(context)
+                                .showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                    'Add schedule for ${client.name}'),
+                                backgroundColor: accentColor,
+                              ),
+                            );
+                          },
                         );
                       },
-                    );
-                  },
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildEmptyState(
-      Color textColor, Color secondaryTextColor, Color accentColor) {
+  Widget _buildEmptyState(Color accentColor) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -158,14 +186,14 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
                 size: 40, color: accentColor),
           ),
           const SizedBox(height: 20),
-          Text('No clients yet',
+          const Text('No clients yet',
               style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: textColor)),
+                  color: Colors.white)),
           const SizedBox(height: 8),
-          Text('Add your first client to get started',
-              style: TextStyle(fontSize: 14, color: secondaryTextColor)),
+          const Text('Add your first client to get started',
+              style: TextStyle(fontSize: 14, color: Colors.white70)),
         ],
       ),
     );
@@ -205,7 +233,8 @@ class _ClientTile extends StatelessWidget {
       const Color(0xFF42A5F5),
       const Color(0xFFFF7043),
     ];
-    final index = client.id.codeUnits.fold(0, (a, b) => a + b) % colors.length;
+    final index =
+        client.id.codeUnits.fold(0, (a, b) => a + b) % colors.length;
     return colors[index];
   }
 
@@ -230,7 +259,8 @@ class _ClientTile extends StatelessWidget {
           color: cardColor,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isExpanded ? accentColor.withAlpha(128) : Colors.transparent,
+            color:
+            isExpanded ? accentColor.withAlpha(128) : Colors.transparent,
             width: 1.5,
           ),
           boxShadow: isExpanded
@@ -245,7 +275,7 @@ class _ClientTile extends StatelessWidget {
         ),
         child: Column(
           children: [
-            // ── Row (always visible) ───────────────────────────
+            // ── Row (always visible) ─────────────────────────
             InkWell(
               onTap: onTap,
               borderRadius: BorderRadius.circular(20),
@@ -283,10 +313,10 @@ class _ClientTile extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(client.name,
-                              style: TextStyle(
+                              style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
-                                  color: textColor)),
+                                  color: Colors.white)),
                           const SizedBox(height: 4),
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -309,15 +339,15 @@ class _ClientTile extends StatelessWidget {
                     AnimatedRotation(
                       turns: isExpanded ? 0.5 : 0,
                       duration: const Duration(milliseconds: 300),
-                      child: Icon(Icons.keyboard_arrow_down_rounded,
-                          color: secondaryTextColor),
+                      child: const Icon(Icons.keyboard_arrow_down_rounded,
+                          color: Colors.white70),
                     ),
                   ],
                 ),
               ),
             ),
 
-            // ── Expanded detail card ───────────────────────────
+            // ── Expanded detail card ─────────────────────────
             AnimatedCrossFade(
               duration: const Duration(milliseconds: 300),
               crossFadeState: isExpanded
@@ -328,18 +358,14 @@ class _ClientTile extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 child: Column(
                   children: [
-                    Divider(
-                        color: isDarkMode ? Colors.white12 : Colors.black12),
+                    const Divider(color: Colors.white24),
                     const SizedBox(height: 12),
 
-                    _detailRow(Icons.badge_outlined, 'Client ID',
-                        client.id, secondaryTextColor, textColor),
+                    _detailRow(Icons.badge_outlined, 'Client ID', client.id),
                     const SizedBox(height: 10),
-                    _detailRow(Icons.category_outlined, 'Type',
-                        client.subtitle, secondaryTextColor, textColor),
+                    _detailRow(Icons.category_outlined, 'Type', client.subtitle),
                     const SizedBox(height: 10),
-                    _detailRow(Icons.check_circle_outline, 'Status',
-                        'Active', secondaryTextColor, textColor),
+                    _detailRow(Icons.check_circle_outline, 'Status', 'Active'),
 
                     const SizedBox(height: 20),
 
@@ -373,21 +399,20 @@ class _ClientTile extends StatelessWidget {
     );
   }
 
-  Widget _detailRow(IconData icon, String label, String value,
-      Color secondaryTextColor, Color textColor) {
+  Widget _detailRow(IconData icon, String label, String value) {
     return Row(
       children: [
-        Icon(icon, size: 18, color: secondaryTextColor),
+        Icon(icon, size: 18, color: Colors.white70),
         const SizedBox(width: 10),
         Text('$label: ',
-            style: TextStyle(fontSize: 13, color: secondaryTextColor)),
+            style: const TextStyle(fontSize: 13, color: Colors.white70)),
         Expanded(
           child: Text(value,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
+              style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: textColor)),
+                  color: Colors.white)),
         ),
       ],
     );
