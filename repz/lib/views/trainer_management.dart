@@ -83,17 +83,16 @@ class _TrainerManagementPageState extends State<TrainerManagementPage> {
               itemCount: clients.length,
               separatorBuilder: (context, index) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
-                return ClientCard(
-                  client: clients[index],
-                  isDarkMode: widget.isDarkMode,
-                  accentColor: accentColor,
-                  isHighlighted: selectedClientIndex == index, // Check if selected
-                  onTap: () {
-                    setState(() {
-                      selectedClientIndex = index; // Update selected index
-                    });
-                  },
-                );
+                // return ClientCard(
+                //   client: clients[index],
+                //   isDarkMode: widget.isDarkMode,
+                //   accentColor: accentColor, // Check if selected
+                //   onTap: () {
+                //     setState(() {
+                //       selectedClientIndex = index; // Update selected index
+                //     });
+                //   },
+                // );
               },
             ),
           ),
