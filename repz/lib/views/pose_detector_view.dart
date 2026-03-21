@@ -52,7 +52,7 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
   DateTime _lastFeedbackTime = DateTime.now();
   Set<PoseLandmarkType> _currentBadJoints = {};
 
-  final List<String> _activeWorkoutJoints = [
+  final List<String> _activeWorkoutJoints = [ // Remove the hardcoded list and instead replace with the method call + CRUD --> Store the active workout joints in the BE and use an API call to fetch them through the factory
     'leftShoulder',
     'leftElbow',
     'leftWrist',
@@ -185,7 +185,7 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
         final closestIndex = PoseMatcher.findClosestFrameIndex(
           normalizedLive,
           _normalizedBaseline,
-          _activeWorkoutJoints,
+          _activeWorkoutJoints, //Replace this with the method call  OR initialize the active workout joints
             _lastMatchedIndex
         );
 

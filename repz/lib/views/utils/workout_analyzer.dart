@@ -47,7 +47,7 @@ class WorkoutAnalyzer {
     return angleRad * (180 / pi);
   }
 
-  static WorkoutFeedback analyze(
+  static WorkoutFeedback analyze( //Factory for analyzing workouts
       WorkoutType type,
       Map<String, Point3D> livePose,
       Map<String, Point3D> baselinePose
@@ -62,6 +62,8 @@ class WorkoutAnalyzer {
         return WorkoutFeedback("Workout type not supported", {});
     }
   }
+
+  // Write a method to return active workout joins
 
   static WorkoutFeedback _analyzeCurls(Map<String, Point3D> livePose, Map<String, Point3D> baselinePose) {
     final Set<PoseLandmarkType> badJoints = {};
