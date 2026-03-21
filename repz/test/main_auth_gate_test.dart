@@ -151,10 +151,12 @@ class _TestApp extends StatelessWidget {
 
 class FakeWorkoutGateway implements WorkoutGateway {
   @override
-  Future<int> fetchWorkoutProgress(String userId) async => 0;
+  Future<int> fetchWorkoutProgress(String userId, {String? workoutPlanId}) async => 0;
 
   @override
-  Future<void> syncWorkoutProgress(String userId, int index) async {}
+  Future<void> syncWorkoutProgress(String userId, int index, {
+  String? workoutPlanId,
+  }) async {}
 }
 
 class FakeAuthGateway implements AuthGateway {
