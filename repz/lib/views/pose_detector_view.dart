@@ -104,7 +104,6 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
 
   @override
   void dispose() {
-    widget.onProgressSaved?.call(_currentIndex);
     _canProcess = false;
     _poseDetector.close();
     super.dispose();
@@ -240,10 +239,12 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
         _currentIndex++;
       });
       _loadExercise(_currentIndex);
+      widget.onProgressSaved?.call(_currentIndex);
     } else {
       setState(() {
         _currentIndex = 0; // Reset index to the start for next time
       });
+      widget.onProgressSaved?.call(_currentIndex);
       Navigator.pop(context);
     }
   }
