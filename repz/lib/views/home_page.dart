@@ -164,6 +164,7 @@ class _HomePageState extends State<HomePage> {
                                   print('Failed to sync workout progress: $e');
                                 }
                               },
+                            isDarkMode: widget.isDarkMode,
                           ),
                         ),
                       );

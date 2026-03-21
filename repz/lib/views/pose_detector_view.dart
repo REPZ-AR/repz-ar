@@ -18,12 +18,14 @@ class PoseDetectorView extends StatefulWidget {
   final List<Exercise> exercises;
   final int initialIndex;
   final Function(int)? onProgressSaved;
+  final bool isDarkMode;
 
   const PoseDetectorView({
     super.key,
     required this.exercises,
     this.initialIndex = 0,
     this.onProgressSaved,
+    required this.isDarkMode,
   });
 
   @override
@@ -111,6 +113,7 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
 
   @override
   Widget build(BuildContext context) {
+    final accentColor = widget.isDarkMode ? const Color(0xFFCFF500) : const Color(0xFFA66CFF);
     return DetectorView(
       title: 'Pose Detector',
       customPaint: _customPaint,
@@ -148,7 +151,7 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
         right: 16,
         child: ElevatedButton.icon(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFCFF500), // Theme Accent Color
+            backgroundColor: accentColor, // Theme Accent Color
             foregroundColor: Colors.black,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           ),
