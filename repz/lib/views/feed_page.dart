@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../model/feed_item.dart';
 
 class FeedPage extends StatefulWidget {
   final bool isDarkMode;
@@ -9,13 +12,16 @@ class FeedPage extends StatefulWidget {
   State<FeedPage> createState() => _FeedPageState();
 }
 
-class _FeedPageState extends State<FeedPage> with SingleTickerProviderStateMixin {
+class _FeedPageState extends State<FeedPage>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  late Future<List<FeedItem>> _feedFuture;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _feedFuture = _fetchFeed();
   }
 
   @override
@@ -24,38 +30,67 @@ class _FeedPageState extends State<FeedPage> with SingleTickerProviderStateMixin
     super.dispose();
   }
 
+  // ── Supabase fetch ──────────────────────────────────────────
+
+  Future<List<FeedItem>> _fetchFeed() async {
+    final response = await Supabase.instance.client
+        .from('feed_items')
+        .select()
+        .order('created_at', ascending: false);
+
+    return (response as List<dynamic>)
+        .map((e) => FeedItem.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  void _refresh() {
+    setState(() {
+      _feedFuture = _fetchFeed();
+    });
+  }
+
+  // ── Theme helpers ───────────────────────────────────────────
+
+  Color get _accent =>
+      widget.isDarkMode ? const Color(0xFFCFF500) : const Color(0xFFA66CFF);
+  Color get _bg =>
+      widget.isDarkMode ? const Color(0xFF121212) : Colors.white;
+  Color get _card =>
+      widget.isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
+  Color get _text => widget.isDarkMode ? Colors.white : Colors.black;
+  Color? get _subText =>
+      widget.isDarkMode ? Colors.grey[400] : Colors.grey[600];
+
+  // ─────────────────────────────────────────────────────────────
+  // Build
+  // ─────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
-    final accentColor = widget.isDarkMode ? const Color(0xFFCFF500) : const Color(0xFFA66CFF);
-    final backgroundColor = widget.isDarkMode ? const Color(0xFF121212) : Colors.white;
-    final cardColor = widget.isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
-    final textColor = widget.isDarkMode ? Colors.white : Colors.black;
-    final secondaryTextColor = widget.isDarkMode ? Colors.grey[400] : Colors.grey[600];
-
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: _bg,
       appBar: AppBar(
-        backgroundColor: backgroundColor,
+        backgroundColor: _bg,
         elevation: 0,
         title: Text(
           'Feed',
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
-            color: textColor,
+            color: _text,
           ),
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.notifications_outlined, color: textColor),
+            icon: Icon(Icons.notifications_outlined, color: _text),
             onPressed: () {},
           ),
         ],
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: accentColor,
-          labelColor: accentColor,
-          unselectedLabelColor: secondaryTextColor,
+          indicatorColor: _accent,
+          labelColor: _accent,
+          unselectedLabelColor: _subText,
           labelStyle: const TextStyle(fontWeight: FontWeight.w600),
           tabs: const [
             Tab(text: 'For You'),
@@ -63,203 +98,156 @@ class _FeedPageState extends State<FeedPage> with SingleTickerProviderStateMixin
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildFeedContent(
-            accentColor: accentColor,
-            cardColor: cardColor,
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-          ),
-          _buildFollowingContent(
-            accentColor: accentColor,
-            cardColor: cardColor,
-            textColor: textColor,
-            secondaryTextColor: secondaryTextColor,
-          ),
-        ],
+      body: FutureBuilder<List<FeedItem>>(
+        future: _feedFuture,
+        builder: (context, snapshot) {
+          // Loading
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(
+              child: CircularProgressIndicator(color: _accent),
+            );
+          }
+
+          // Error
+          if (snapshot.hasError) {
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.error_outline, color: _subText, size: 48),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Failed to load feed',
+                    style: TextStyle(color: _text, fontSize: 16),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: _refresh,
+                    child: Text('Retry', style: TextStyle(color: _accent)),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          final items = snapshot.data ?? [];
+
+          // Split tabs: Following = only 'activity' type; For You = everything
+          final forYouItems = items;
+          final followingItems =
+          items.where((i) => i.type == 'activity').toList();
+
+          return TabBarView(
+            controller: _tabController,
+            children: [
+              _buildFeedList(forYouItems),
+              _buildFeedList(followingItems),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildFeedContent({
-    required Color accentColor,
-    required Color cardColor,
-    required Color textColor,
-    required Color? secondaryTextColor,
-  }) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        // Streak Achievement Card
-        _buildStreakCard(
-          name: 'David and Alana',
-          avatars: ['D', 'A'],
-          achievement: 'Reached a 475 day Friend Streak!',
-          days: 475,
-          reactions: ['🎉', '💪', '😊'],
-          reactionCount: 12742,
-          accentColor: accentColor,
-          cardColor: cardColor,
-          textColor: textColor,
-          secondaryTextColor: secondaryTextColor,
-        ),
-        const SizedBox(height: 16),
+  // ─────────────────────────────────────────────────────────────
+  // Feed list
+  // ─────────────────────────────────────────────────────────────
 
-        // Tournament Achievement
-        _buildStreakCard(
-          name: 'Paula',
-          avatars: ['P'],
-          achievement: 'Won the Diamond Tournament Finale 9 times!',
-          icon: '💎',
-          reactions: ['🎉', '💪', '😊'],
-          reactionCount: 3412,
-          accentColor: accentColor,
-          cardColor: cardColor,
-          textColor: textColor,
-          secondaryTextColor: secondaryTextColor,
+  Widget _buildFeedList(List<FeedItem> items) {
+    if (items.isEmpty) {
+      return Center(
+        child: Text(
+          'Nothing here yet 👀',
+          style: TextStyle(color: _subText, fontSize: 16),
         ),
-        const SizedBox(height: 16),
+      );
+    }
 
-        // Workout Milestone
-        _buildStreakCard(
-          name: 'HB',
-          avatars: ['H'],
-          achievement: 'Reached a DuoLingo Streak of 29!',
-          days: 29,
-          reactions: ['🎉', '💪', '😊'],
-          reactionCount: 892,
-          accentColor: accentColor,
-          cardColor: cardColor,
-          textColor: textColor,
-          secondaryTextColor: secondaryTextColor,
-          showBadge: true,
-        ),
-        const SizedBox(height: 16),
-
-        // Activity Post
-        _buildActivityPost(
-          userName: 'Sarah Mitchell',
-          userAvatar: 'S',
-          timeAgo: '2h ago',
-          caption: 'Morning grind! 💪 Hit a new PR on deadlifts today - 315lbs! Feeling stronger every day.',
-          imagePath: null,
-          stats: {
-            'Duration': '1h 15m',
-            'Calories': '420 kcal',
-            'PR': 'Deadlift 315lbs',
-          },
-          likes: 87,
-          comments: 12,
-          accentColor: accentColor,
-          cardColor: cardColor,
-          textColor: textColor,
-          secondaryTextColor: secondaryTextColor,
-        ),
-        const SizedBox(height: 16),
-
-        // Challenge card
-        _buildChallengeCard(
-          title: '30-Day Push-Up Challenge',
-          participants: 1247,
-          daysLeft: 12,
-          progress: 0.6,
-          accentColor: accentColor,
-          cardColor: cardColor,
-          textColor: textColor,
-          secondaryTextColor: secondaryTextColor,
-        ),
-        const SizedBox(height: 16),
-
-        // Another Activity
-        _buildActivityPost(
-          userName: 'Mike Johnson',
-          userAvatar: 'M',
-          timeAgo: '5h ago',
-          caption: 'Leg day complete! 🦵 Nothing beats that post-workout feeling.',
-          imagePath: null,
-          stats: {
-            'Duration': '50m',
-            'Exercises': '8 sets',
-            'Calories': '380 kcal',
-          },
-          likes: 54,
-          comments: 8,
-          accentColor: accentColor,
-          cardColor: cardColor,
-          textColor: textColor,
-          secondaryTextColor: secondaryTextColor,
-        ),
-        const SizedBox(height: 16),
-
-        // Streak milestone
-        _buildStreakCard(
-          name: 'Emma & Jake',
-          avatars: ['E', 'J'],
-          achievement: 'Completed 100 workouts together this year!',
-          days: 100,
-          reactions: ['🎉', '🔥', '💪'],
-          reactionCount: 234,
-          accentColor: accentColor,
-          cardColor: cardColor,
-          textColor: textColor,
-          secondaryTextColor: secondaryTextColor,
-        ),
-      ],
+    return RefreshIndicator(
+      color: _accent,
+      onRefresh: () async => _refresh(),
+      child: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: items.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 16),
+        itemBuilder: (_, i) => _dispatchItem(items[i]),
+      ),
     );
   }
 
-  Widget _buildFollowingContent({
-    required Color accentColor,
-    required Color cardColor,
-    required Color textColor,
-    required Color? secondaryTextColor,
-  }) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        _buildActivityPost(
-          userName: 'Alex Torres',
-          userAvatar: 'A',
-          timeAgo: '1h ago',
-          caption: 'Early morning run before the gym! 🏃‍♂️ The sunrise was incredible.',
-          imagePath: null,
-          stats: {
-            'Distance': '5.2 km',
-            'Pace': '5:30 /km',
-            'Time': '28m 36s',
-          },
-          likes: 42,
-          comments: 5,
-          accentColor: accentColor,
-          cardColor: cardColor,
-          textColor: textColor,
-          secondaryTextColor: secondaryTextColor,
-        ),
-        const SizedBox(height: 16),
+  // ─────────────────────────────────────────────────────────────
+  // Template dispatcher  ← the key piece
+  // ─────────────────────────────────────────────────────────────
 
-        _buildActivityPost(
-          userName: 'Jessica Park',
-          userAvatar: 'J',
-          timeAgo: '3h ago',
-          caption: 'New yoga routine unlocked! Feeling zen and flexible 🧘‍♀️',
-          imagePath: null,
-          stats: {
-            'Duration': '45m',
-            'Type': 'Vinyasa Flow',
-            'Calories': '180 kcal',
-          },
-          likes: 67,
-          comments: 9,
-          accentColor: accentColor,
-          cardColor: cardColor,
-          textColor: textColor,
-          secondaryTextColor: secondaryTextColor,
-        ),
-      ],
-    );
+  Widget _dispatchItem(FeedItem item) {
+    final p = item.payload;
+
+    switch (item.type) {
+    // ── streak ──────────────────────────────────────────────
+      case 'streak':
+        return _buildStreakCard(
+          name: p['name'] as String,
+          avatars: List<String>.from(p['avatars'] as List),
+          achievement: p['achievement'] as String,
+          days: p['days'] as int?,
+          icon: p['icon'] as String?,
+          reactions: List<String>.from(p['reactions'] as List),
+          reactionCount: p['reaction_count'] as int,
+          showBadge: (p['show_badge'] as bool?) ?? false,
+        );
+
+    // ── tournament ───────────────────────────────────────────
+      case 'tournament':
+        return _buildStreakCard(
+          name: p['name'] as String,
+          avatars: List<String>.from(p['avatars'] as List),
+          achievement: p['achievement'] as String,
+          days: null,
+          icon: p['icon'] as String?,
+          reactions: List<String>.from(p['reactions'] as List),
+          reactionCount: p['reaction_count'] as int,
+          showBadge: (p['show_badge'] as bool?) ?? false,
+        );
+
+    // ── activity ─────────────────────────────────────────────
+      case 'activity':
+        return _buildActivityPost(
+          userName: p['user_name'] as String,
+          userAvatar: p['user_avatar'] as String,
+          timeAgo: _timeAgo(DateTime.parse(
+              (p['created_at'] as String?) ?? DateTime.now().toIso8601String())),
+          caption: p['caption'] as String,
+          stats: Map<String, String>.from(p['stats'] as Map),
+          likes: p['likes'] as int,
+          comments: p['comments'] as int,
+        );
+
+    // ── challenge ────────────────────────────────────────────
+      case 'challenge':
+        return _buildChallengeCard(
+          title: p['title'] as String,
+          participants: p['participants'] as int,
+          daysLeft: p['days_left'] as int,
+          progress: (p['progress'] as num).toDouble(),
+        );
+
+      default:
+        return const SizedBox.shrink();
+    }
   }
+
+  // ── Utility: human-readable time ────────────────────────────
+
+  String _timeAgo(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Widget templates  (same as before, params only — no hardcoding)
+  // ─────────────────────────────────────────────────────────────
 
   Widget _buildStreakCard({
     required String name,
@@ -269,21 +257,14 @@ class _FeedPageState extends State<FeedPage> with SingleTickerProviderStateMixin
     String? icon,
     required List<String> reactions,
     required int reactionCount,
-    required Color accentColor,
-    required Color cardColor,
-    required Color textColor,
-    required Color? secondaryTextColor,
     bool showBadge = false,
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: cardColor,
+        color: _card,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.grey.withOpacity(0.2),
-          width: 1,
-        ),
+        border: Border.all(color: Colors.grey.withOpacity(0.2)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -296,10 +277,9 @@ class _FeedPageState extends State<FeedPage> with SingleTickerProviderStateMixin
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header with avatars and name
+          // Header
           Row(
             children: [
-              // Avatars
               SizedBox(
                 width: avatars.length > 1 ? 60 : 40,
                 height: 40,
@@ -310,7 +290,7 @@ class _FeedPageState extends State<FeedPage> with SingleTickerProviderStateMixin
                         left: i * 20.0,
                         child: CircleAvatar(
                           radius: 20,
-                          backgroundColor: _getAvatarColor(i),
+                          backgroundColor: _avatarColor(i),
                           child: Text(
                             avatars[i],
                             style: const TextStyle(
@@ -335,15 +315,16 @@ class _FeedPageState extends State<FeedPage> with SingleTickerProviderStateMixin
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: textColor,
+                            color: _text,
                           ),
                         ),
                         if (showBadge) ...[
                           const SizedBox(width: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: accentColor.withOpacity(0.2),
+                              color: _accent.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
@@ -351,7 +332,7 @@ class _FeedPageState extends State<FeedPage> with SingleTickerProviderStateMixin
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
-                                color: accentColor,
+                                color: _accent,
                               ),
                             ),
                           ),
@@ -360,10 +341,7 @@ class _FeedPageState extends State<FeedPage> with SingleTickerProviderStateMixin
                     ),
                     Text(
                       '2h ago',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: secondaryTextColor,
-                      ),
+                      style: TextStyle(fontSize: 12, color: _subText),
                     ),
                   ],
                 ),
@@ -372,37 +350,27 @@ class _FeedPageState extends State<FeedPage> with SingleTickerProviderStateMixin
           ),
           const SizedBox(height: 12),
 
-          // Achievement text
           Text(
             achievement,
-            style: TextStyle(
-              fontSize: 15,
-              color: textColor,
-              height: 1.4,
-            ),
+            style: TextStyle(fontSize: 15, color: _text, height: 1.4),
           ),
           const SizedBox(height: 12),
 
-          // Days badge or icon
+          // Days badge or emoji icon
           if (days != null)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [
-                    accentColor.withOpacity(0.8),
-                    accentColor,
-                  ],
+                  colors: [_accent.withOpacity(0.8), _accent],
                 ),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
-                    '🔥',
-                    style: TextStyle(fontSize: 24),
-                  ),
+                  const Text('🔥', style: TextStyle(fontSize: 24)),
                   const SizedBox(width: 8),
                   Text(
                     days.toString(),
@@ -416,33 +384,31 @@ class _FeedPageState extends State<FeedPage> with SingleTickerProviderStateMixin
               ),
             )
           else if (icon != null)
-            Text(
-              icon,
-              style: const TextStyle(fontSize: 48),
-            ),
+            Text(icon, style: const TextStyle(fontSize: 48)),
+
           const SizedBox(height: 16),
 
           // Reactions bar
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: widget.isDarkMode
                       ? Colors.grey[800]
                       : Colors.grey[100],
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Row(
+                child: const Row(
                   children: [
-                    const Text('👍 CELEBRATE', style: TextStyle(fontSize: 12)),
+                    Text('👍 CELEBRATE', style: TextStyle(fontSize: 12)),
                   ],
                 ),
               ),
               const SizedBox(width: 12),
-              // Reaction emojis
-              for (String reaction in reactions) ...[
-                Text(reaction, style: const TextStyle(fontSize: 18)),
+              for (String r in reactions) ...[
+                Text(r, style: const TextStyle(fontSize: 18)),
                 const SizedBox(width: 4),
               ],
               Text(
@@ -450,7 +416,7 @@ class _FeedPageState extends State<FeedPage> with SingleTickerProviderStateMixin
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: secondaryTextColor,
+                  color: _subText,
                 ),
               ),
             ],
@@ -465,23 +431,15 @@ class _FeedPageState extends State<FeedPage> with SingleTickerProviderStateMixin
     required String userAvatar,
     required String timeAgo,
     required String caption,
-    String? imagePath,
     required Map<String, String> stats,
     required int likes,
     required int comments,
-    required Color accentColor,
-    required Color cardColor,
-    required Color textColor,
-    required Color? secondaryTextColor,
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: cardColor,
+        color: _card,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.grey.withOpacity(0.2),
-          width: 1,
-        ),
+        border: Border.all(color: Colors.grey.withOpacity(0.2)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -521,20 +479,17 @@ class _FeedPageState extends State<FeedPage> with SingleTickerProviderStateMixin
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: textColor,
+                          color: _text,
                         ),
                       ),
                       Text(
                         timeAgo,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: secondaryTextColor,
-                        ),
+                        style: TextStyle(fontSize: 12, color: _subText),
                       ),
                     ],
                   ),
                 ),
-                Icon(Icons.more_horiz, color: secondaryTextColor),
+                Icon(Icons.more_horiz, color: _subText),
               ],
             ),
           ),
@@ -544,11 +499,7 @@ class _FeedPageState extends State<FeedPage> with SingleTickerProviderStateMixin
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
               caption,
-              style: TextStyle(
-                fontSize: 14,
-                color: textColor,
-                height: 1.4,
-              ),
+              style: TextStyle(fontSize: 14, color: _text, height: 1.4),
             ),
           ),
           const SizedBox(height: 12),
@@ -566,24 +517,22 @@ class _FeedPageState extends State<FeedPage> with SingleTickerProviderStateMixin
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: stats.entries.map((entry) {
+                children: stats.entries.map((e) {
                   return Column(
                     children: [
                       Text(
-                        entry.value,
+                        e.value,
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: textColor,
+                          color: _text,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        entry.key,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: secondaryTextColor,
-                        ),
+                        e.key,
+                        style:
+                        TextStyle(fontSize: 11, color: _subText),
                       ),
                     ],
                   );
@@ -593,13 +542,10 @@ class _FeedPageState extends State<FeedPage> with SingleTickerProviderStateMixin
           ),
           const SizedBox(height: 12),
 
-          // Divider
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Divider(
-              color: Colors.grey.withOpacity(0.3),
-              height: 1,
-            ),
+                color: Colors.grey.withOpacity(0.3), height: 1),
           ),
 
           // Actions
@@ -608,21 +554,10 @@ class _FeedPageState extends State<FeedPage> with SingleTickerProviderStateMixin
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildActionButton(
-                  icon: Icons.thumb_up_outlined,
-                  label: likes.toString(),
-                  textColor: textColor,
-                ),
-                _buildActionButton(
-                  icon: Icons.chat_bubble_outline,
-                  label: comments.toString(),
-                  textColor: textColor,
-                ),
-                _buildActionButton(
-                  icon: Icons.share_outlined,
-                  label: 'Share',
-                  textColor: textColor,
-                ),
+                _actionButton(Icons.thumb_up_outlined, likes.toString()),
+                _actionButton(
+                    Icons.chat_bubble_outline, comments.toString()),
+                _actionButton(Icons.share_outlined, 'Share'),
               ],
             ),
           ),
@@ -636,27 +571,17 @@ class _FeedPageState extends State<FeedPage> with SingleTickerProviderStateMixin
     required int participants,
     required int daysLeft,
     required double progress,
-    required Color accentColor,
-    required Color cardColor,
-    required Color textColor,
-    required Color? secondaryTextColor,
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            accentColor.withOpacity(0.3),
-            accentColor.withOpacity(0.1),
-          ],
+          colors: [_accent.withOpacity(0.3), _accent.withOpacity(0.1)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: accentColor.withOpacity(0.5),
-          width: 1.5,
-        ),
+        border: Border.all(color: _accent.withOpacity(0.5), width: 1.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -666,14 +591,11 @@ class _FeedPageState extends State<FeedPage> with SingleTickerProviderStateMixin
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: accentColor,
+                  color: _accent,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(
-                  Icons.emoji_events,
-                  color: Colors.black,
-                  size: 24,
-                ),
+                child: const Icon(Icons.emoji_events,
+                    color: Colors.black, size: 24),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -685,15 +607,13 @@ class _FeedPageState extends State<FeedPage> with SingleTickerProviderStateMixin
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: textColor,
+                        color: _text,
                       ),
                     ),
                     Text(
                       '$participants participants',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: secondaryTextColor,
-                      ),
+                      style:
+                      TextStyle(fontSize: 12, color: _subText),
                     ),
                   ],
                 ),
@@ -702,14 +622,13 @@ class _FeedPageState extends State<FeedPage> with SingleTickerProviderStateMixin
           ),
           const SizedBox(height: 16),
 
-          // Progress bar
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 8,
               backgroundColor: Colors.grey.withOpacity(0.3),
-              valueColor: AlwaysStoppedAnimation<Color>(accentColor),
+              valueColor: AlwaysStoppedAnimation<Color>(_accent),
             ),
           ),
           const SizedBox(height: 8),
@@ -722,27 +641,23 @@ class _FeedPageState extends State<FeedPage> with SingleTickerProviderStateMixin
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: textColor,
+                  color: _text,
                 ),
               ),
               Text(
                 '$daysLeft days left',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: secondaryTextColor,
-                ),
+                style: TextStyle(fontSize: 12, color: _subText),
               ),
             ],
           ),
           const SizedBox(height: 12),
 
-          // Join button
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {},
               style: ElevatedButton.styleFrom(
-                backgroundColor: accentColor,
+                backgroundColor: _accent,
                 foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
@@ -751,10 +666,8 @@ class _FeedPageState extends State<FeedPage> with SingleTickerProviderStateMixin
               ),
               child: const Text(
                 'Join Challenge',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
+                style:
+                TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
               ),
             ),
           ),
@@ -763,11 +676,7 @@ class _FeedPageState extends State<FeedPage> with SingleTickerProviderStateMixin
     );
   }
 
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required Color textColor,
-  }) {
+  Widget _actionButton(IconData icon, String label) {
     return InkWell(
       onTap: () {},
       borderRadius: BorderRadius.circular(8),
@@ -775,14 +684,12 @@ class _FeedPageState extends State<FeedPage> with SingleTickerProviderStateMixin
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Row(
           children: [
-            Icon(icon, size: 20, color: textColor.withOpacity(0.7)),
+            Icon(icon, size: 20, color: _text.withOpacity(0.7)),
             const SizedBox(width: 6),
             Text(
               label,
-              style: TextStyle(
-                fontSize: 14,
-                color: textColor.withOpacity(0.7),
-              ),
+              style:
+              TextStyle(fontSize: 14, color: _text.withOpacity(0.7)),
             ),
           ],
         ),
@@ -790,8 +697,8 @@ class _FeedPageState extends State<FeedPage> with SingleTickerProviderStateMixin
     );
   }
 
-  Color _getAvatarColor(int index) {
-    final colors = [
+  Color _avatarColor(int index) {
+    const colors = [
       Colors.purple,
       Colors.orange,
       Colors.blue,
@@ -801,4 +708,3 @@ class _FeedPageState extends State<FeedPage> with SingleTickerProviderStateMixin
     return colors[index % colors.length];
   }
 }
-

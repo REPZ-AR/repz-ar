@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_mlkit_object_detection/google_mlkit_object_detection.dart';
 
 import 'detector_view.dart';
+import 'equipment_overlay.dart';
 import 'painters/object_detector_painter.dart';
 import 'utils.dart';
 
@@ -20,6 +21,10 @@ class _ObjectDetectorView extends State<ObjectDetectorView> {
   String? _text;
   var _cameraLensDirection = CameraLensDirection.back;
   int _option = 0;
+  bool _isOverlayVisible = false;
+  String? _lastOverlayEquipment;
+  DateTime? _lastOverlayAt;
+  static const Duration _overlayCooldown = Duration(seconds: 2);
   final _options = {
     'default': '',
     'gym_equipment_classifier': 'gym_equipment_classifier.tflite'
@@ -48,6 +53,43 @@ class _ObjectDetectorView extends State<ObjectDetectorView> {
     _canProcess = false;
     _objectDetector?.close();
     super.dispose();
+  }
+
+  String? _extractEquipmentName(List<DetectedObject> objects) {
+    if (objects.isEmpty) return null;
+    final labels = objects.first.labels;
+    if (labels.isEmpty) return null;
+    final name = labels.first.text.trim();
+    return name.isEmpty ? null : name;
+  }
+
+  Future<void> _showEquipmentOverlay(String equipmentName) async {
+    if (!mounted || _isOverlayVisible) return;
+
+    final normalizedName = equipmentName.trim().toLowerCase();
+    final now = DateTime.now();
+    if (_lastOverlayEquipment == normalizedName &&
+        _lastOverlayAt != null &&
+        now.difference(_lastOverlayAt!) < _overlayCooldown) {
+      return;
+    }
+
+    _isOverlayVisible = true;
+    _canProcess = false;
+    try {
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: true,
+        builder: (_) => EquipmentOverlay(equipmentName: equipmentName),
+      );
+      _lastOverlayEquipment = normalizedName;
+      _lastOverlayAt = DateTime.now();
+    } finally {
+      _isOverlayVisible = false;
+      if (mounted) {
+        _canProcess = true;
+      }
+    }
   }
 
   @override
@@ -139,7 +181,7 @@ class _ObjectDetectorView extends State<ObjectDetectorView> {
       final options = ObjectDetectorOptions(
         mode: _mode,
         classifyObjects: true,
-        multipleObjects: true,
+        multipleObjects: false,
       );
       _objectDetector = ObjectDetector(options: options);
     } else if (_option > 0 && _option <= _options.length) {
@@ -152,7 +194,7 @@ class _ObjectDetectorView extends State<ObjectDetectorView> {
         mode: _mode,
         modelPath: modelPath,
         classifyObjects: true,
-        multipleObjects: true,
+        multipleObjects: false,
       );
       _objectDetector = ObjectDetector(options: options);
     }
@@ -183,19 +225,25 @@ class _ObjectDetectorView extends State<ObjectDetectorView> {
       _text = '';
     });
     final objects = await _objectDetector!.processImage(inputImage);
+    final visibleObjects =
+        objects.isNotEmpty ? <DetectedObject>[objects.first] : <DetectedObject>[];
+    final equipmentName = _extractEquipmentName(visibleObjects);
+    if (equipmentName != null) {
+      await _showEquipmentOverlay(equipmentName);
+    }
     // print('Objects found: ${objects.length}\n\n');
     if (inputImage.metadata?.size != null &&
         inputImage.metadata?.rotation != null) {
       final painter = ObjectDetectorPainter(
-        objects,
+        visibleObjects,
         inputImage.metadata!.size,
         inputImage.metadata!.rotation,
         _cameraLensDirection,
       );
       _customPaint = CustomPaint(painter: painter);
     } else {
-      String text = 'Objects found: ${objects.length}\n\n';
-      for (final object in objects) {
+      String text = 'Objects found: ${visibleObjects.length}\n\n';
+      for (final object in visibleObjects) {
         text +=
             'Object:  trackingId: ${object.trackingId} - ${object.labels.map((e) => e.text)}\n\n';
       }
