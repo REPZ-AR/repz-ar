@@ -25,6 +25,7 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
     Client(name: 'Emma Wilson', subtitle: '3 Months'),
     Client(name: 'James Smith', subtitle: 'Weight Loss Goal'),
     Client(name: 'Emma Wales', subtitle: 'Weight Loss Goal'),
+    Client(name: 'Emma Wales', subtitle: 'Weight Loss Goal'),
   ];
 
   @override
