@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:repz/views/object_detector_view.dart';
-import 'package:repz/views/pose_detector_view.dart';
 
 class ActivityPage extends StatelessWidget {
-  const ActivityPage({Key? key}) : super(key: key);
+  const ActivityPage({super.key});
 
   @override
   Widget build(BuildContext context) {

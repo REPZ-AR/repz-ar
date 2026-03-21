@@ -51,6 +51,8 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.3.0
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -71,12 +73,14 @@ flutter:
   uses-material-design: true
 
   assets:
+    - ./assets/data/
     - ./assets/data/baseline_curls.json
     - ./assets/ml/gym_equipment_model.tflite
     - ./assets/images/login_bg.png
     - ./assets/labels.txt
     - ./assets/images/mode_picker_bg.png
     - ./assets/images/google_icon.png
+    - ./assets/images/client_ui_image.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:
@@ -95,3 +99,15 @@ flutter:
           weight: 700
         - asset: assets/fonts/Inter_28pt-Regular.ttf
           weight: 400
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icons/repz-dark.png"
+
+flutter_native_splash:
+  color: "#ffffff"
+  background_image: "assets/icons/repz-dark.png"
+  fullscreen: true
+  android: true
+  ios: true

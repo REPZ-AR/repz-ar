@@ -13,10 +13,15 @@ void main() {
       (tester) async {
         final authGateway = FakeAuthGateway();
         final profileGateway = FakeProfileGateway();
+        final workoutGateway = FakeWorkoutGateway();
         addTearDown(authGateway.dispose);
 
         await tester.pumpWidget(
-          _TestApp(authGateway: authGateway, profileGateway: profileGateway),
+          _TestApp(
+            authGateway: authGateway,
+            profileGateway: profileGateway,
+            workoutGateway: workoutGateway,
+          ),
         );
 
         expect(find.text('Continue with Google'), findsOneWidget);
@@ -37,10 +42,15 @@ void main() {
       final profileGateway = FakeProfileGateway(
         onFetchProfile: (_) => completer.future,
       );
+      final workoutGateway = FakeWorkoutGateway();
       addTearDown(authGateway.dispose);
 
       await tester.pumpWidget(
-        _TestApp(authGateway: authGateway, profileGateway: profileGateway),
+        _TestApp(
+          authGateway: authGateway,
+          profileGateway: profileGateway,
+          workoutGateway: workoutGateway,
+        ),
       );
 
       await tester.pump();
@@ -66,10 +76,15 @@ void main() {
           return updatedProfile;
         },
       );
+      final workoutGateway = FakeWorkoutGateway();
       addTearDown(authGateway.dispose);
 
       await tester.pumpWidget(
-        _TestApp(authGateway: authGateway, profileGateway: profileGateway),
+        _TestApp(
+          authGateway: authGateway,
+          profileGateway: profileGateway,
+          workoutGateway: workoutGateway,
+        ),
       );
       await tester.pump();
 
@@ -89,10 +104,15 @@ void main() {
         onFetchProfile:
             (_) async => _profile(firstTime: false, mode: ProfileMode.user),
       );
+      final workoutGateway = FakeWorkoutGateway();
       addTearDown(authGateway.dispose);
 
       await tester.pumpWidget(
-        _TestApp(authGateway: authGateway, profileGateway: profileGateway),
+        _TestApp(
+          authGateway: authGateway,
+          profileGateway: profileGateway,
+          workoutGateway: workoutGateway,
+        ),
       );
       await tester.pump();
 
@@ -105,10 +125,15 @@ void main() {
 }
 
 class _TestApp extends StatelessWidget {
-  const _TestApp({required this.authGateway, required this.profileGateway});
+  const _TestApp({
+    required this.authGateway,
+    required this.profileGateway,
+    required this.workoutGateway,
+  });
 
   final AuthGateway authGateway;
   final ProfileGateway profileGateway;
+  final WorkoutGateway workoutGateway;
 
   @override
   Widget build(BuildContext context) {
@@ -118,9 +143,18 @@ class _TestApp extends StatelessWidget {
         onThemeChanged: (_) {},
         authGateway: authGateway,
         profileGateway: profileGateway,
+        workoutGateway: workoutGateway,
       ),
     );
   }
+}
+
+class FakeWorkoutGateway implements WorkoutGateway {
+  @override
+  Future<int> fetchWorkoutProgress(String userId) async => 0;
+
+  @override
+  Future<void> syncWorkoutProgress(String userId, int index) async {}
 }
 
 class FakeAuthGateway implements AuthGateway {

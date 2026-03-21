@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../model/client.dart';
+import '../../model/trainer.dart';
 
-class ClientCard extends StatelessWidget {
-  final Client client;
+class TrainerCard extends StatelessWidget {
+  final Trainer trainer;
   final bool isExpanded;
   final bool isDarkMode;
   final Color accentColor;
@@ -10,9 +10,9 @@ class ClientCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onAddSchedule;
 
-  const ClientCard({
+  const TrainerCard({
     Key? key,
-    required this.client,
+    required this.trainer,
     required this.isExpanded,
     required this.isDarkMode,
     required this.accentColor,
@@ -31,32 +31,21 @@ class ClientCard extends StatelessWidget {
       const Color(0xFFFF7043),
     ];
     final index =
-        client.id.codeUnits.fold(0, (a, b) => a + b) % colors.length;
+        trainer.id.codeUnits.fold(0, (a, b) => a + b) % colors.length;
     return colors[index];
   }
 
   String get _initials {
-    final parts = client.name.trim().split(' ');
+    final parts = trainer.name.trim().split(' ');
     if (parts.length >= 2) {
       return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
     }
-    return client.name.isNotEmpty ? client.name[0].toUpperCase() : '?';
+    return trainer.name.isNotEmpty ? trainer.name[0].toUpperCase() : '?';
   }
 
   @override
   Widget build(BuildContext context) {
     final avatarColor = _avatarColor();
-
-    final primaryTextColor =
-    isDarkMode ? Colors.white : const Color(0xFF1A1A1A);
-    final labelTextColor =
-    isDarkMode ? Colors.white : const Color(0xFF444444);
-    final valueTextColor =
-    isDarkMode ? Colors.white : const Color(0xFF444444);
-    final dividerColor =
-    isDarkMode ? Colors.white24 : const Color(0xFFEEEEEE);
-    final chevronColor =
-    isDarkMode ? Colors.white60 : const Color(0xFFAAAAAA);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -98,10 +87,10 @@ class ClientCard extends StatelessWidget {
                         color: avatarColor,
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: client.avatarUrl != null
+                      child: trainer.avatarUrl != null
                           ? ClipRRect(
                         borderRadius: BorderRadius.circular(16),
-                        child: Image.network(client.avatarUrl!,
+                        child: Image.network(trainer.avatarUrl!,
                             fit: BoxFit.cover),
                       )
                           : Center(
@@ -119,11 +108,11 @@ class ClientCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(client.name,
-                              style: TextStyle(
+                          Text(trainer.name,
+                              style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
-                                  color: primaryTextColor)),
+                                  color: Colors.white)),
                           const SizedBox(height: 4),
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -132,7 +121,7 @@ class ClientCard extends StatelessWidget {
                               color: accentColor.withAlpha(30),
                               borderRadius: BorderRadius.circular(6),
                             ),
-                            child: Text(client.subtitle,
+                            child: Text(trainer.subtitle,
                                 style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
@@ -146,8 +135,8 @@ class ClientCard extends StatelessWidget {
                     AnimatedRotation(
                       turns: isExpanded ? 0.5 : 0,
                       duration: const Duration(milliseconds: 300),
-                      child: Icon(Icons.keyboard_arrow_down_rounded,
-                          color: chevronColor),
+                      child: const Icon(Icons.keyboard_arrow_down_rounded,
+                          color: Colors.white70),
                     ),
                   ],
                 ),
@@ -165,17 +154,16 @@ class ClientCard extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 child: Column(
                   children: [
-                    Divider(color: dividerColor),
+                    const Divider(color: Colors.white24),
                     const SizedBox(height: 12),
 
-                    _detailRow(Icons.badge_outlined, 'Client ID',
-                        client.id, labelTextColor, valueTextColor),
+                    _detailRow(Icons.badge_outlined, 'Trainer ID', trainer.id),
                     const SizedBox(height: 10),
-                    _detailRow(Icons.category_outlined, 'Type',
-                        client.subtitle, labelTextColor, valueTextColor),
+                    _detailRow(
+                        Icons.category_outlined, 'Type', trainer.subtitle),
                     const SizedBox(height: 10),
-                    _detailRow(Icons.check_circle_outline, 'Status',
-                        'Active', labelTextColor, valueTextColor),
+                    _detailRow(
+                        Icons.check_circle_outline, 'Status', 'Active'),
 
                     const SizedBox(height: 20),
 
@@ -209,21 +197,20 @@ class ClientCard extends StatelessWidget {
     );
   }
 
-  Widget _detailRow(IconData icon, String label, String value,
-      Color labelColor, Color valueColor) {
+  Widget _detailRow(IconData icon, String label, String value) {
     return Row(
       children: [
-        Icon(icon, size: 18, color: labelColor),
+        Icon(icon, size: 18, color: Colors.white70),
         const SizedBox(width: 10),
         Text('$label: ',
-            style: TextStyle(fontSize: 13, color: labelColor)),
+            style: const TextStyle(fontSize: 13, color: Colors.white70)),
         Expanded(
           child: Text(value,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
+              style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: valueColor)),
+                  color: Colors.white)),
         ),
       ],
     );

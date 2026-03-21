@@ -4,7 +4,9 @@ import 'package:repz/views/feed_page.dart';
 import 'package:repz/views/home_page.dart';
 import 'package:repz/views/menu_page.dart';
 import 'package:repz/views/trainer_management.dart';
+import 'package:repz/views/workout_builder_page.dart';
 
+import '../main.dart';
 import 'object_detector_view.dart';
 
 class MainPage extends StatefulWidget {
@@ -13,19 +15,23 @@ class MainPage extends StatefulWidget {
   final String? avatarUrl;
   final String? userName;
   final String? userEmail;
+  final String userId;
+  final WorkoutGateway workoutGateway;
   final Future<void> Function()? onLogout;
   final Function(bool) onThemeChanged;
 
   const MainPage({
-    Key? key,
+    super.key,
     required this.isDarkMode,
     required this.isCoach,
     required this.onThemeChanged,
+    required this.userId,
+    required this.workoutGateway,
     this.avatarUrl,
     this.userName,
     this.userEmail,
     this.onLogout,
-  }) : super(key: key);
+  });
 
   @override
   State<MainPage> createState() => _MainPageState();
@@ -57,13 +63,10 @@ class _MainPageState extends State<MainPage>
 
   void _buildPages() {
     _pages = {
-      0: HomePage(isDarkMode: widget.isDarkMode, avatarUrl: widget.avatarUrl),
+      0: HomePage(isDarkMode: widget.isDarkMode, avatarUrl: widget.avatarUrl, userId: widget.userId, workoutGateway: widget.workoutGateway),
       1: widget.isCoach
           ? ClientManagementPage(isDarkMode: widget.isDarkMode)
-          : TrainerManagementPage(
-              isDarkMode: widget.isDarkMode,
-              isCoach: false,
-            ),
+          : TrainerManagementPage(isDarkMode: widget.isDarkMode),
       3: FeedPage(isDarkMode: widget.isDarkMode),
       4: MenuPage(
           isDarkMode: widget.isDarkMode,
@@ -129,6 +132,13 @@ class _MainPageState extends State<MainPage>
     _closeCameraMenu();
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => ObjectDetectorView()),
+    );
+  }
+
+  Future<void> _openWorkoutBuilder() async {
+    _closeCameraMenu();
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => const WorkoutBuilderPage()),
     );
   }
 
@@ -206,8 +216,7 @@ class _MainPageState extends State<MainPage>
                     label: 'Create Workout Plan',
                     accentColor: accentColor,
                     labelColor: labelColor,
-                    onTap: () =>
-                        _showComingSoon('Create workout plan coming soon'),
+                    onTap: _openWorkoutBuilder,
                   ),
                   _buildRadialAction(
                     animation: _menuAnimation,
@@ -254,7 +263,7 @@ class _MainPageState extends State<MainPage>
           boxShadow: isOpen
               ? [
                   BoxShadow(
-                    color: accentColor.withOpacity(0.28),
+                    color: accentColor.withValues(alpha: 0.28),
                     blurRadius: 18,
                     spreadRadius: 2,
                   ),
@@ -320,7 +329,7 @@ class _MainPageState extends State<MainPage>
                   border: Border.all(color: accentColor, width: 2.5),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.16),
+                      color: Colors.black.withValues(alpha: 0.16),
                       blurRadius: 12,
                       offset: const Offset(0, 6),
                     ),
@@ -335,7 +344,7 @@ class _MainPageState extends State<MainPage>
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor.withOpacity(0.96),
+                  color: Theme.of(context).cardColor.withValues(alpha: 0.96),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
@@ -345,6 +354,7 @@ class _MainPageState extends State<MainPage>
                     color: labelColor,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
+                    decoration: TextDecoration.none,
                   ),
                 ),
               ),
