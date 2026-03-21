@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:repz/main.dart';
 import 'package:repz/views/pose_detector_view.dart';
 
 import '../model/workout.dart';
@@ -6,10 +7,14 @@ import '../model/workout.dart';
 class HomePage extends StatefulWidget {
   final bool isDarkMode;
   final String? avatarUrl;
+  final String userId;
+  final WorkoutGateway workoutGateway;
 
   HomePage({Key? key,
     required this.isDarkMode,
     this.avatarUrl,
+    required this.userId,
+    required this.workoutGateway
   }) : super(key: key);
 
   @override
@@ -19,6 +24,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
 
   int _currentWorkoutIndex = 0;
+  bool _isLoadingProgress = true;
 
   final List<Exercise> todaysPlan = [
     Exercise(
@@ -39,9 +45,34 @@ class _HomePageState extends State<HomePage> {
     ),
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    _loadProgress();
+  }
+
+  Future<void> _loadProgress() async {
+    try {
+      final savedIndex = await widget.workoutGateway.fetchWorkoutProgress(widget.userId);
+      if (mounted) {
+        setState(() {
+          _currentWorkoutIndex = savedIndex;
+          _isLoadingProgress = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoadingProgress = false;
+      });
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoadingProgress) {
+      return const Center(child: CircularProgressIndicator());
+    }
     final featuredExercise = todaysPlan[_currentWorkoutIndex];;
     final accentColor = widget.isDarkMode ? const Color(0xFFCFF500) : const Color(0xFFA66CFF);
     final cardColor = widget.isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
@@ -120,15 +151,20 @@ class _HomePageState extends State<HomePage> {
                           builder: (context) => PoseDetectorView(
                             exercises: todaysPlan,
                             initialIndex: _currentWorkoutIndex,
-                            onProgressSaved: (savedIndex) {
-                              Future.microtask(() {
+                            onProgressSaved: (savedIndex) async {
                                 if (mounted) {
                                   setState(() {
                                     _currentWorkoutIndex = savedIndex;
                                   });
                                 }
-                              });
-                            },
+
+                                try {
+                                  await widget.workoutGateway.syncWorkoutProgress(widget.userId, savedIndex);
+                                } catch (e) {
+                                  print('Failed to sync workout progress: $e');
+                                }
+                              },
+                            isDarkMode: widget.isDarkMode,
                           ),
                         ),
                       );
