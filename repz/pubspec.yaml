@@ -73,6 +73,7 @@ flutter:
     - ./assets/images/login_bg.png
     - ./assets/images/mode_picker_bg.png
     - ./assets/images/google_icon.png
+    - ./assets/images/client_ui_image.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:
