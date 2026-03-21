@@ -144,14 +144,9 @@ class _TrainerManagementPageState extends State<TrainerManagementPage> {
                       _expandedTrainerId =
                       _expandedTrainerId == id ? null : id;
                     }),
-                    onAddSchedule: (trainer) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                              'Schedule with ${trainer.name}'),
-                          backgroundColor: accentColor,
-                        ),
-                      );
+                    onRemove: (trainer) async {
+                      await _service.removeTrainer(trainerUserId: trainer.id);
+                      _loadTrainers();
                     },
                   ),
                 ),
