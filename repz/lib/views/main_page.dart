@@ -4,6 +4,7 @@ import 'package:repz/views/feed_page.dart';
 import 'package:repz/views/home_page.dart';
 import 'package:repz/views/menu_page.dart';
 import 'package:repz/views/trainer_management.dart';
+import 'package:repz/views/workout_builder_page.dart';
 
 import '../main.dart';
 import 'object_detector_view.dart';
@@ -137,6 +138,13 @@ class _MainPageState extends State<MainPage>
     );
   }
 
+  Future<void> _openWorkoutBuilder() async {
+    _closeCameraMenu();
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => const WorkoutBuilderPage()),
+    );
+  }
+
   void _showComingSoon(String message) {
     _closeCameraMenu();
     ScaffoldMessenger.of(context)
@@ -211,8 +219,7 @@ class _MainPageState extends State<MainPage>
                     label: 'Create Workout Plan',
                     accentColor: accentColor,
                     labelColor: labelColor,
-                    onTap: () =>
-                        _showComingSoon('Create workout plan coming soon'),
+                    onTap: _openWorkoutBuilder,
                   ),
                   _buildRadialAction(
                     animation: _menuAnimation,
@@ -350,6 +357,7 @@ class _MainPageState extends State<MainPage>
                     color: labelColor,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
+                    decoration: TextDecoration.none,
                   ),
                 ),
               ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:repz/views/saved_workout_plans_page.dart';
 
 class MenuPage extends StatelessWidget {
   final bool isDarkMode;
@@ -171,6 +172,37 @@ class MenuPage extends StatelessWidget {
                     activeThumbColor: accentColor,
                   ),
                 ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              decoration: BoxDecoration(
+                color: cardColor,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: accentColor.withValues(alpha: 0.18),
+                  child: Icon(
+                    Icons.playlist_play_rounded,
+                    color: isDarkMode ? accentColor : Colors.black,
+                  ),
+                ),
+                title: const Text(
+                  'Saved Plans',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                subtitle: const Text(
+                  'Open, edit, and start your saved workout plans',
+                ),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const SavedWorkoutPlansPage(),
+                    ),
+                  );
+                },
               ),
             ),
           ],
