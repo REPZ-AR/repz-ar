@@ -87,8 +87,12 @@ class ProfileRepositoryGateway implements ProfileGateway {
 }
 
 abstract class WorkoutGateway {
-  Future<int> fetchWorkoutProgress(String userId);
-  Future<void> syncWorkoutProgress(String userId, int index);
+  Future<int> fetchWorkoutProgress(String userId, {String? workoutPlanId});
+  Future<void> syncWorkoutProgress(
+    String userId,
+    int index, {
+    String? workoutPlanId,
+  });
 }
 
 class WorkoutRepositoryGateway implements WorkoutGateway {
@@ -98,13 +102,24 @@ class WorkoutRepositoryGateway implements WorkoutGateway {
   final WorkoutRepository _repository;
 
   @override
-  Future<int> fetchWorkoutProgress(String userId) {
-    return _repository.fetchWorkoutProgress(userId);
+  Future<int> fetchWorkoutProgress(String userId, {String? workoutPlanId}) {
+    return _repository.fetchWorkoutProgress(
+      userId,
+      workoutPlanId: workoutPlanId,
+    );
   }
 
   @override
-  Future<void> syncWorkoutProgress(String userId, int index) {
-    return _repository.syncWorkoutProgress(userId, index);
+  Future<void> syncWorkoutProgress(
+    String userId,
+    int index, {
+    String? workoutPlanId,
+  }) {
+    return _repository.syncWorkoutProgress(
+      userId,
+      index,
+      workoutPlanId: workoutPlanId,
+    );
   }
 }
 

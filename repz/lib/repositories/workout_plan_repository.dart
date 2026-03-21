@@ -52,6 +52,126 @@ class WorkoutPlanRepository {
     return WorkoutPlan.fromMap(row);
   }
 
+  Future<List<WorkoutPlanScheduleEntry>> fetchSchedule() async {
+    final userId = _currentUser?.id;
+    if (userId == null) return const <WorkoutPlanScheduleEntry>[];
+
+    final rows = await _client
+        .from('workout_plan_schedule')
+        .select(_scheduleSelectQuery)
+        .eq('user_id', userId)
+        .order('day_of_week');
+
+    return rows
+        .cast<Map<String, dynamic>>()
+        .map(WorkoutPlanScheduleEntry.fromMap)
+        .toList();
+  }
+
+  Future<WorkoutPlan?> fetchScheduledPlanForDay(int dayOfWeek) async {
+    final userId = _currentUser?.id;
+    if (userId == null) return null;
+
+    final row = await _client
+        .from('workout_plan_schedule')
+        .select(_scheduleSelectQuery)
+        .eq('user_id', userId)
+        .eq('day_of_week', dayOfWeek)
+        .maybeSingle();
+
+    if (row == null) return null;
+    return WorkoutPlanScheduleEntry.fromMap(row).plan;
+  }
+
+  Future<void> setScheduleForDay(int dayOfWeek, String? workoutPlanId) async {
+    final userId = _currentUser?.id;
+    if (userId == null) {
+      throw const AuthException('You need to be signed in to schedule plans.');
+    }
+
+    if (workoutPlanId == null) {
+      await _client
+          .from('workout_plan_schedule')
+          .delete()
+          .eq('user_id', userId)
+          .eq('day_of_week', dayOfWeek);
+      return;
+    }
+
+    await _client.from('workout_plan_schedule').upsert({
+      'user_id': userId,
+      'day_of_week': dayOfWeek,
+      'workout_plan_id': workoutPlanId,
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    }, onConflict: 'user_id,day_of_week');
+  }
+
+  Future<List<PrebuiltWorkoutPlan>> fetchPrebuiltPlans() async {
+    final rows = await _client
+        .from('prebuilt_workout_plans')
+        .select(_prebuiltSelectQuery)
+        .order('is_featured', ascending: false)
+        .order('created_at');
+
+    return rows
+        .cast<Map<String, dynamic>>()
+        .map(PrebuiltWorkoutPlan.fromMap)
+        .toList();
+  }
+
+  Future<PrebuiltWorkoutPlan?> fetchRecommendedPrebuiltPlan() async {
+    final rows = await _client
+        .from('prebuilt_workout_plans')
+        .select(_prebuiltSelectQuery)
+        .eq('is_featured', true)
+        .limit(1);
+
+    if (rows.isEmpty) {
+      final fallback = await _client
+          .from('prebuilt_workout_plans')
+          .select(_prebuiltSelectQuery)
+          .limit(1);
+      if (fallback.isEmpty) return null;
+      return PrebuiltWorkoutPlan.fromMap(
+        fallback.first as Map<String, dynamic>,
+      );
+    }
+
+    return PrebuiltWorkoutPlan.fromMap(rows.first as Map<String, dynamic>);
+  }
+
+  Future<WorkoutPlan> copyPrebuiltPlanToUser(
+    String prebuiltPlanId, {
+    bool setActive = false,
+  }) async {
+    final prebuilt = await _client
+        .from('prebuilt_workout_plans')
+        .select(_prebuiltSelectQuery)
+        .eq('id', prebuiltPlanId)
+        .single();
+
+    final template = PrebuiltWorkoutPlan.fromMap(prebuilt);
+    final userId = _currentUser?.id;
+    if (userId == null) {
+      throw const AuthException('You need to be signed in to copy plans.');
+    }
+
+    final copiedPlan = WorkoutPlan(
+      userId: userId,
+      name: template.name,
+      notes: template.description,
+      isActive: setActive,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      exercises: List<WorkoutPlanExercise>.generate(
+        template.exercises.length,
+        (index) => template.exercises[index].copyWith(sortOrder: index),
+      ),
+    );
+
+    return savePlan(copiedPlan, setActive: setActive);
+  }
+
   Future<WorkoutPlan> savePlan(
     WorkoutPlan plan, {
     bool setActive = false,
@@ -186,5 +306,22 @@ class WorkoutPlanRepository {
       'workout_plan_exercises('
       'id, workout_plan_id, sort_order, exercise_key, display_name, workout_type, asset_path, target_joints, '
       'workout_plan_sets(id, workout_plan_exercise_id, sort_order, reps, variation)'
+      ')';
+
+  static const String _scheduleSelectQuery =
+      'id, user_id, day_of_week, workout_plan_id, created_at, updated_at, '
+      'workout_plans('
+      'id, user_id, name, notes, is_active, created_at, updated_at, '
+      'workout_plan_exercises('
+      'id, workout_plan_id, sort_order, exercise_key, display_name, workout_type, asset_path, target_joints, '
+      'workout_plan_sets(id, workout_plan_exercise_id, sort_order, reps, variation)'
+      ')'
+      ')';
+
+  static const String _prebuiltSelectQuery =
+      'id, name, description, difficulty, goal_tag, is_featured, created_at, updated_at, '
+      'prebuilt_workout_plan_exercises('
+      'id, prebuilt_workout_plan_id, sort_order, exercise_key, display_name, workout_type, asset_path, target_joints, '
+      'prebuilt_workout_plan_sets(id, prebuilt_workout_plan_exercise_id, sort_order, reps, variation)'
       ')';
 }

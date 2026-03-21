@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:repz/model/workout_plan.dart';
 import 'package:repz/repositories/workout_plan_repository.dart';
+import 'package:repz/views/prebuilt_workout_plans_page.dart';
+import 'package:repz/views/weekly_schedule_page.dart';
 import 'package:repz/views/workout_builder_page.dart';
 import 'package:repz/views/workout_plan_helpers.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -113,7 +115,33 @@ class _SavedWorkoutPlansPageState extends State<SavedWorkoutPlansPage> {
     final cardColor = isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Saved Plans')),
+      appBar: AppBar(
+        title: const Text('Saved Plans'),
+        actions: [
+          IconButton(
+            tooltip: 'Weekly Schedule',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const WeeklySchedulePage(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.calendar_today_outlined),
+          ),
+          IconButton(
+            tooltip: 'Pre-built Plans',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const PrebuiltWorkoutPlansPage(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.auto_awesome_outlined),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _openBuilder(),
         backgroundColor: accentColor,

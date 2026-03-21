@@ -5,8 +5,10 @@ import 'package:repz/views/home_page.dart';
 import 'package:repz/views/menu_page.dart';
 import 'package:repz/views/trainer_management.dart';
 import 'package:repz/views/workout_builder_page.dart';
+import 'package:repz/views/workout_plan_helpers.dart';
 
 import '../main.dart';
+import '../repositories/workout_plan_repository.dart';
 import 'object_detector_view.dart';
 
 class MainPage extends StatefulWidget {
@@ -39,6 +41,7 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage>
     with SingleTickerProviderStateMixin {
+  final WorkoutPlanRepository _workoutPlanRepository = WorkoutPlanRepository();
   int _selectedIndex = 0;
   bool _isCameraMenuOpen = false;
   late final AnimationController _menuController;
@@ -86,7 +89,9 @@ class _MainPageState extends State<MainPage>
   void didUpdateWidget(MainPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.isDarkMode != widget.isDarkMode ||
-        oldWidget.avatarUrl != widget.avatarUrl) {
+        oldWidget.avatarUrl != widget.avatarUrl ||
+        oldWidget.userId != widget.userId ||
+        oldWidget.workoutGateway != widget.workoutGateway) {
       _buildPages();
     }
   }
@@ -145,11 +150,40 @@ class _MainPageState extends State<MainPage>
     );
   }
 
-  void _showComingSoon(String message) {
+  Future<void> _startTodaysPlan() async {
     _closeCameraMenu();
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+
+    try {
+      final todaysPlan = await _workoutPlanRepository.fetchScheduledPlanForDay(
+        DateTime.now().weekday,
+      );
+
+      if (!mounted) return;
+
+      if (todaysPlan == null) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text(
+                'No plan is scheduled for today yet. Set one from Weekly Schedule or follow a pre-built plan on Home.',
+              ),
+            ),
+          );
+        return;
+      }
+
+      await WorkoutPlanHelpers.startPlan(context, todaysPlan);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('Could not start today\'s scheduled plan.'),
+          ),
+        );
+    }
   }
 
   @override
@@ -237,8 +271,7 @@ class _MainPageState extends State<MainPage>
                     label: "Start Today's Plan",
                     accentColor: accentColor,
                     labelColor: labelColor,
-                    onTap: () =>
-                        _showComingSoon("Start today's plan coming soon"),
+                    onTap: _startTodaysPlan,
                   ),
                   GestureDetector(
                     onTap: _toggleCameraMenu,
