@@ -30,3 +30,11 @@ create policy "Trainers can delete their client records"
 create policy "Clients can view their trainers"
   on public.trainer_client for select to authenticated
   using (auth.uid() = client_id);
+
+create policy "Anyone can view trainer profiles"
+  on public.profile for select to authenticated
+  using (mode = 'TRAINER');
+
+create policy "Clients can insert their own trainer relationships"
+  on public.trainer_client for insert to authenticated
+  with check (auth.uid() = client_id);
