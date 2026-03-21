@@ -626,7 +626,7 @@ class _WorkoutBuilderCard extends StatelessWidget {
 
                             final variationField = DropdownButtonFormField<String>(
                               isExpanded: true,
-                              value:
+                              initialValue:
                                   catalogExercise.variations.contains(
                                         set.variation,
                                       )
