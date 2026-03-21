@@ -10,14 +10,14 @@ class MenuPage extends StatelessWidget {
   final Function(bool) onThemeChanged;
 
   const MenuPage({
-    Key? key,
+    super.key,
     required this.isDarkMode,
     this.avatarUrl,
     this.userName,
     this.userEmail,
     this.onLogout,
     required this.onThemeChanged,
-  }) : super(key: key);
+  });
 
   String _initialsFor(String? name, String? email) {
     final source = (name != null && name.trim().isNotEmpty)

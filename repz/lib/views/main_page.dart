@@ -21,7 +21,7 @@ class MainPage extends StatefulWidget {
   final Function(bool) onThemeChanged;
 
   const MainPage({
-    Key? key,
+    super.key,
     required this.isDarkMode,
     required this.isCoach,
     required this.onThemeChanged,
@@ -31,7 +31,7 @@ class MainPage extends StatefulWidget {
     this.userName,
     this.userEmail,
     this.onLogout,
-  }) : super(key: key);
+  });
 
   @override
   State<MainPage> createState() => _MainPageState();
@@ -266,7 +266,7 @@ class _MainPageState extends State<MainPage>
           boxShadow: isOpen
               ? [
                   BoxShadow(
-                    color: accentColor.withOpacity(0.28),
+                    color: accentColor.withValues(alpha: 0.28),
                     blurRadius: 18,
                     spreadRadius: 2,
                   ),
@@ -332,7 +332,7 @@ class _MainPageState extends State<MainPage>
                   border: Border.all(color: accentColor, width: 2.5),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.16),
+                      color: Colors.black.withValues(alpha: 0.16),
                       blurRadius: 12,
                       offset: const Offset(0, 6),
                     ),
@@ -347,7 +347,7 @@ class _MainPageState extends State<MainPage>
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor.withOpacity(0.96),
+                  color: Theme.of(context).cardColor.withValues(alpha: 0.96),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(

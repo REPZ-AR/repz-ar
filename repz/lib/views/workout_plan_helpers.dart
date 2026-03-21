@@ -24,6 +24,7 @@ class WorkoutPlanHelpers {
     BuildContext context,
     WorkoutPlan plan,
   ) async {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final exercises = supportedExercisesForPlan(plan);
     if (exercises.isEmpty) {
       ScaffoldMessenger.of(context)
@@ -40,7 +41,10 @@ class WorkoutPlanHelpers {
 
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => PoseDetectorView(exercises: exercises),
+        builder: (context) => PoseDetectorView(
+          exercises: exercises,
+          isDarkMode: isDarkMode,
+        ),
       ),
     );
     return true;
