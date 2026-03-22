@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:repz/model/workout.dart';
 import 'package:repz/model/workout_catalog.dart';
 import 'package:repz/model/workout_plan.dart';
+import 'package:repz/repositories/exercise_repository.dart';
 import 'package:repz/repositories/workout_plan_repository.dart';
 import 'package:repz/views/workout_plan_helpers.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -16,32 +18,42 @@ class WorkoutBuilderPage extends StatefulWidget {
 
 class _WorkoutBuilderPageState extends State<WorkoutBuilderPage> {
   final WorkoutPlanRepository _repository = WorkoutPlanRepository();
+  final ExerciseRepository _exerciseRepository = ExerciseRepository();
+
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
   final Map<String, bool> _expandedStates = <String, bool>{};
 
   bool _isSaving = false;
+  bool _isLoadingLibrary = true;
+
   late List<WorkoutPlanExercise> _exercises;
+  List<Exercise> _libraryExercises = <Exercise>[];
 
   bool get _isEditing => widget.initialPlan != null;
 
   @override
   void initState() {
     super.initState();
+
     final initialPlan = widget.initialPlan;
     _nameController.text =
         initialPlan?.name ?? 'Workout ${DateTime.now().month}/${DateTime.now().day}';
     _notesController.text = initialPlan?.notes ?? '';
-    _exercises = initialPlan?.exercises
+
+    _exercises =
+        initialPlan?.exercises
             .map((exercise) => exercise.copyWith(sets: List.of(exercise.sets)))
             .toList() ??
-        <WorkoutPlanExercise>[
-          WorkoutCatalog.exercises.first.createPlanExercise(sortOrder: 0),
-        ];
+            <WorkoutPlanExercise>[
+              WorkoutCatalog.exercises.first.createPlanExercise(sortOrder: 0),
+            ];
 
     for (final exercise in _exercises) {
       _expandedStates[_exerciseUiKey(exercise)] = true;
     }
+
+    _loadExerciseLibrary();
   }
 
   @override
@@ -49,6 +61,31 @@ class _WorkoutBuilderPageState extends State<WorkoutBuilderPage> {
     _nameController.dispose();
     _notesController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadExerciseLibrary() async {
+    try {
+      final data = await _exerciseRepository.fetchExercises();
+
+      if (!mounted) return;
+
+      setState(() {
+        _libraryExercises = data;
+        _isLoadingLibrary = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoadingLibrary = false;
+      });
+
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('Could not load exercise library.')),
+        );
+    }
   }
 
   String _exerciseUiKey(WorkoutPlanExercise exercise) =>
@@ -64,7 +101,7 @@ class _WorkoutBuilderPageState extends State<WorkoutBuilderPage> {
   void _normalizeSortOrder() {
     _exercises = List<WorkoutPlanExercise>.generate(
       _exercises.length,
-      (index) => _exercises[index].copyWith(sortOrder: index),
+          (index) => _exercises[index].copyWith(sortOrder: index),
     );
   }
 
@@ -74,7 +111,7 @@ class _WorkoutBuilderPageState extends State<WorkoutBuilderPage> {
     });
   }
 
-  void _addExercise(WorkoutCatalogExercise catalogExercise) {
+  void _addCatalogExercise(WorkoutCatalogExercise catalogExercise) {
     setState(() {
       final exercise = catalogExercise.createPlanExercise(
         sortOrder: _exercises.length,
@@ -82,6 +119,95 @@ class _WorkoutBuilderPageState extends State<WorkoutBuilderPage> {
       _exercises = [..._exercises, exercise];
       _expandedStates[_exerciseUiKey(exercise)] = true;
     });
+  }
+
+  Future<void> _addDbExercise(Exercise exercise) async {
+    final result = await _showAddExerciseDialog(exercise);
+    if (result == null) return;
+
+    final int setCount = result.$1;
+    final int repsPerSet = result.$2;
+
+    final newExercise = WorkoutPlanExercise(
+      sortOrder: _exercises.length,
+      exerciseKey: exercise.id,
+      displayName: exercise.name,
+      workoutType: exercise.type,
+      targetJoints: exercise.targetJoints,
+      sets: List<WorkoutPlanSet>.generate(
+        setCount,
+            (index) => WorkoutPlanSet(
+          sortOrder: index,
+          reps: repsPerSet,
+          variation: 'Standard',
+        ),
+      ),
+    );
+
+    setState(() {
+      _exercises = [..._exercises, newExercise];
+      _expandedStates[_exerciseUiKey(newExercise)] = true;
+    });
+  }
+
+  Future<(int, int)?> _showAddExerciseDialog(Exercise exercise) async {
+    final setsController = TextEditingController(text: '3');
+    final repsController = TextEditingController(text: '12');
+
+    return showDialog<(int, int)>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Add ${exercise.name}'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: setsController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Number of sets',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: repsController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Reps per set',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final sets = int.tryParse(setsController.text.trim());
+                final reps = int.tryParse(repsController.text.trim());
+
+                if (sets == null || reps == null || sets <= 0 || reps <= 0) {
+                  ScaffoldMessenger.of(context)
+                    ..hideCurrentSnackBar()
+                    ..showSnackBar(
+                      const SnackBar(
+                        content: Text('Enter valid set and rep counts.'),
+                      ),
+                    );
+                  return;
+                }
+
+                Navigator.of(context).pop((sets, reps));
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _removeExercise(int index) {
@@ -100,9 +226,7 @@ class _WorkoutBuilderPageState extends State<WorkoutBuilderPage> {
 
   void _addSet(int exerciseIndex) {
     final exercise = _exercises[exerciseIndex];
-    final variations =
-        WorkoutCatalog.byKey(exercise.exerciseKey)?.variations ??
-        WorkoutCatalog.commonVariations;
+    final variations = _variationsForExercise(exercise);
 
     _updateExercise(
       exerciseIndex,
@@ -122,7 +246,12 @@ class _WorkoutBuilderPageState extends State<WorkoutBuilderPage> {
   void _resetDefaultSets(int exerciseIndex) {
     final exercise = _exercises[exerciseIndex];
     final catalogExercise = WorkoutCatalog.byKey(exercise.exerciseKey);
-    if (catalogExercise == null) return;
+    if (catalogExercise == null) {
+      _showMessage(
+        'Reset Default is only available for built-in catalogue exercises.',
+      );
+      return;
+    }
 
     _updateExercise(
       exerciseIndex,
@@ -139,7 +268,7 @@ class _WorkoutBuilderPageState extends State<WorkoutBuilderPage> {
       exercise.copyWith(
         sets: List<WorkoutPlanSet>.generate(
           updatedSets.length,
-          (index) => updatedSets[index].copyWith(sortOrder: index),
+              (index) => updatedSets[index].copyWith(sortOrder: index),
         ),
       ),
     );
@@ -150,6 +279,20 @@ class _WorkoutBuilderPageState extends State<WorkoutBuilderPage> {
     final updatedSets = List<WorkoutPlanSet>.from(exercise.sets);
     updatedSets[setIndex] = set;
     _updateExercise(exerciseIndex, exercise.copyWith(sets: updatedSets));
+  }
+
+  IconData _iconForExercise(WorkoutPlanExercise exercise) {
+    return WorkoutCatalog.byKey(exercise.exerciseKey)?.icon ??
+        Icons.fitness_center;
+  }
+
+  List<String> _variationsForExercise(WorkoutPlanExercise exercise) {
+    return WorkoutCatalog.byKey(exercise.exerciseKey)?.variations ??
+        const <String>['Standard'];
+  }
+
+  bool _canResetDefault(WorkoutPlanExercise exercise) {
+    return WorkoutCatalog.byKey(exercise.exerciseKey) != null;
   }
 
   WorkoutPlan _buildPlan(bool isActive) {
@@ -170,11 +313,11 @@ class _WorkoutBuilderPageState extends State<WorkoutBuilderPage> {
       updatedAt: now,
       exercises: List<WorkoutPlanExercise>.generate(
         _exercises.length,
-        (exerciseIndex) => _exercises[exerciseIndex].copyWith(
+            (exerciseIndex) => _exercises[exerciseIndex].copyWith(
           sortOrder: exerciseIndex,
           sets: List<WorkoutPlanSet>.generate(
             _exercises[exerciseIndex].sets.length,
-            (setIndex) => _exercises[exerciseIndex].sets[setIndex].copyWith(
+                (setIndex) => _exercises[exerciseIndex].sets[setIndex].copyWith(
               sortOrder: setIndex,
             ),
           ),
@@ -226,9 +369,9 @@ class _WorkoutBuilderPageState extends State<WorkoutBuilderPage> {
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final accentColor =
-        isDarkMode ? const Color(0xFFCFF500) : const Color(0xFFA66CFF);
+    isDarkMode ? const Color(0xFFCFF500) : const Color(0xFFA66CFF);
     final primaryCtaColor =
-        isDarkMode ? const Color(0xFFA66CFF) : const Color(0xFFCFF500);
+    isDarkMode ? const Color(0xFFA66CFF) : const Color(0xFFCFF500);
     final primaryCtaTextColor = isDarkMode ? Colors.white : Colors.black;
     final cardColor = isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
     final outlineColor = isDarkMode
@@ -295,16 +438,15 @@ class _WorkoutBuilderPageState extends State<WorkoutBuilderPage> {
           },
           itemBuilder: (context, index) {
             final exercise = _exercises[index];
-            final catalogExercise =
-                WorkoutCatalog.byKey(exercise.exerciseKey) ??
-                WorkoutCatalog.exercises.first;
             final isExpanded = _expandedStates[_exerciseUiKey(exercise)] ?? true;
 
             return _WorkoutBuilderCard(
               key: ValueKey(_exerciseUiKey(exercise)),
               index: index,
               exercise: exercise,
-              catalogExercise: catalogExercise,
+              icon: _iconForExercise(exercise),
+              variations: _variationsForExercise(exercise),
+              canResetDefault: _canResetDefault(exercise),
               accentColor: accentColor,
               cardColor: cardColor,
               outlineColor: outlineColor,
@@ -375,10 +517,10 @@ class _WorkoutBuilderPageState extends State<WorkoutBuilderPage> {
                   onPressed: _isSaving ? null : () => _save(startAfterSave: false),
                   icon: _isSaving
                       ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
                       : const Icon(Icons.save_outlined),
                   label: Text(_isEditing ? 'Update Plan' : 'Save Plan'),
                 ),
@@ -394,53 +536,64 @@ class _WorkoutBuilderPageState extends State<WorkoutBuilderPage> {
                 ),
               ),
               const SizedBox(height: 12),
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: WorkoutCatalog.exercises.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 0.86,
-                ),
-                itemBuilder: (context, index) {
-                  final exercise = WorkoutCatalog.exercises[index];
-                  return InkWell(
-                    onTap: () => _addExercise(exercise),
-                    borderRadius: BorderRadius.circular(24),
-                    child: Ink(
-                      decoration: BoxDecoration(
-                        color: cardColor,
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: accentColor, width: 2),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              exercise.icon,
-                              size: 36,
-                              color: isDarkMode ? accentColor : Colors.black,
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              exercise.name,
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w700),
-                            ),
-                          ],
+              if (_isLoadingLibrary)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (_libraryExercises.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Text('No exercises available.'),
+                )
+              else
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _libraryExercises.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 0.86,
+                  ),
+                  itemBuilder: (context, index) {
+                    final exercise = _libraryExercises[index];
+                    return InkWell(
+                      onTap: () => _addDbExercise(exercise),
+                      borderRadius: BorderRadius.circular(24),
+                      child: Ink(
+                        decoration: BoxDecoration(
+                          color: cardColor,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: accentColor, width: 2),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.fitness_center,
+                                size: 36,
+                                color: isDarkMode ? accentColor : Colors.black,
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                exercise.name,
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.w700),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  );
-                },
-              ),
+                    );
+                  },
+                ),
             ],
           ),
         ),
@@ -454,7 +607,9 @@ class _WorkoutBuilderCard extends StatelessWidget {
     super.key,
     required this.index,
     required this.exercise,
-    required this.catalogExercise,
+    required this.icon,
+    required this.variations,
+    required this.canResetDefault,
     required this.accentColor,
     required this.cardColor,
     required this.outlineColor,
@@ -471,7 +626,9 @@ class _WorkoutBuilderCard extends StatelessWidget {
 
   final int index;
   final WorkoutPlanExercise exercise;
-  final WorkoutCatalogExercise catalogExercise;
+  final IconData icon;
+  final List<String> variations;
+  final bool canResetDefault;
   final Color accentColor;
   final Color cardColor;
   final Color outlineColor;
@@ -548,7 +705,7 @@ class _WorkoutBuilderCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Icon(
-                    catalogExercise.icon,
+                    icon,
                     color: isDarkMode ? accentColor : Colors.black,
                   ),
                 ),
@@ -611,7 +768,7 @@ class _WorkoutBuilderCard extends StatelessWidget {
                           builder: (context, constraints) {
                             final repsField = TextFormField(
                               initialValue:
-                                  set.reps == 0 ? '' : set.reps.toString(),
+                              set.reps == 0 ? '' : set.reps.toString(),
                               keyboardType: TextInputType.number,
                               style: Theme.of(context).textTheme.titleSmall
                                   ?.copyWith(fontWeight: FontWeight.w700),
@@ -627,11 +784,9 @@ class _WorkoutBuilderCard extends StatelessWidget {
                             final variationField = DropdownButtonFormField<String>(
                               isExpanded: true,
                               initialValue:
-                                  catalogExercise.variations.contains(
-                                        set.variation,
-                                      )
-                                      ? set.variation
-                                      : catalogExercise.variations.first,
+                              variations.contains(set.variation)
+                                  ? set.variation
+                                  : variations.first,
                               style: Theme.of(context).textTheme.titleSmall
                                   ?.copyWith(fontWeight: FontWeight.w600),
                               decoration: _fieldDecoration(
@@ -641,16 +796,16 @@ class _WorkoutBuilderCard extends StatelessWidget {
                                 Icons.keyboard_arrow_down_rounded,
                                 color: secondaryTextColor,
                               ),
-                              items: catalogExercise.variations
+                              items: variations
                                   .map(
                                     (variation) => DropdownMenuItem<String>(
-                                      value: variation,
-                                      child: Text(
-                                        variation,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  )
+                                  value: variation,
+                                  child: Text(
+                                    variation,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              )
                                   .toList(),
                               onChanged: (value) {
                                 if (value == null) return;
@@ -713,10 +868,11 @@ class _WorkoutBuilderCard extends StatelessWidget {
                 spacing: 10,
                 runSpacing: 10,
                 children: [
-                  OutlinedButton(
-                    onPressed: onResetDefault,
-                    child: const Text('Reset Default'),
-                  ),
+                  if (canResetDefault)
+                    OutlinedButton(
+                      onPressed: onResetDefault,
+                      child: const Text('Reset Default'),
+                    ),
                   FilledButton.tonalIcon(
                     onPressed: onAddSet,
                     icon: const Icon(Icons.add),
