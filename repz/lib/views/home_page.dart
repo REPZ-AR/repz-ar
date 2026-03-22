@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:repz/main.dart';
+import 'package:repz/model/workout.dart';
 import 'package:repz/model/workout_plan.dart';
+import 'package:repz/repositories/exercise_repository.dart';
 import 'package:repz/repositories/workout_plan_repository.dart';
+import 'package:repz/views/pose_detector_view.dart';
 import 'package:repz/views/prebuilt_workout_plans_page.dart';
 import 'package:repz/views/weekly_schedule_page.dart';
 import 'package:repz/views/workout_plan_helpers.dart';
@@ -32,18 +35,30 @@ class _HomePageState extends State<HomePage> {
   WorkoutPlan? _todaysPlan;
   PrebuiltWorkoutPlan? _recommendedPlan;
 
+  List<Exercise> _exercises = [];
+  bool _isLoadingExercises = true;
+
   int get _todayWeekday => DateTime.now().weekday;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadExercises();
+    _loadHomeData();
+  }
 
   Future<void> _loadHomeData() async {
     setState(() => _isLoading = true);
+
     try {
       final todayPlan = await _planRepository.fetchScheduledPlanForDay(
         _todayWeekday,
       );
+
       final recommendedPlan =
-          todayPlan == null
-              ? await _planRepository.fetchRecommendedPrebuiltPlan()
-              : null;
+      todayPlan == null
+          ? await _planRepository.fetchRecommendedPrebuiltPlan()
+          : null;
 
       int savedIndex = 0;
       if (todayPlan?.id != null) {
@@ -54,11 +69,14 @@ class _HomePageState extends State<HomePage> {
       }
 
       final maxIndex =
-          todayPlan == null
-              ? 0
-              : (todayPlan.exercises.isEmpty ? 0 : todayPlan.exercises.length - 1);
+      todayPlan == null
+          ? 0
+          : (todayPlan.exercises.isEmpty
+          ? 0
+          : todayPlan.exercises.length - 1);
 
       if (!mounted) return;
+
       setState(() {
         _todaysPlan = todayPlan;
         _recommendedPlan = recommendedPlan;
@@ -78,15 +96,38 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _loadHomeData();
+  Future<void> _loadExercises() async {
+    try {
+      final repo = ExerciseRepository();
+      final data = await repo.fetchExercises();
+
+      if (!mounted) return;
+
+      setState(() {
+        _exercises = data;
+        _isLoadingExercises = false;
+      });
+    } catch (e) {
+      debugPrint('Error loading exercises: $e');
+
+      if (!mounted) return;
+
+      setState(() {
+        _isLoadingExercises = false;
+      });
+
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('Could not load exercises.')),
+        );
+    }
   }
 
   Future<void> _startTodaysPlan() async {
     final plan = _todaysPlan;
     if (plan == null) return;
+
     final started = await WorkoutPlanHelpers.startPlan(context, plan);
     if (started && mounted) {
       await _loadHomeData();
@@ -102,7 +143,9 @@ class _HomePageState extends State<HomePage> {
         recommendation.id,
         setActive: true,
       );
+
       await _planRepository.setScheduleForDay(_todayWeekday, copied.id);
+
       await widget.workoutGateway.syncWorkoutProgress(
         widget.userId,
         0,
@@ -110,6 +153,7 @@ class _HomePageState extends State<HomePage> {
       );
 
       if (!mounted) return;
+
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
@@ -119,6 +163,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         );
+
       await _loadHomeData();
     } catch (_) {
       if (!mounted) return;
@@ -135,10 +180,11 @@ class _HomePageState extends State<HomePage> {
       MaterialPageRoute(
         builder:
             (context) => PrebuiltWorkoutPlansPage(
-              highlightPlanId: _recommendedPlan?.id,
-            ),
+          highlightPlanId: _recommendedPlan?.id,
+        ),
       ),
     );
+
     if (mounted) {
       await _loadHomeData();
     }
@@ -148,25 +194,43 @@ class _HomePageState extends State<HomePage> {
     await Navigator.of(
       context,
     ).push(MaterialPageRoute(builder: (context) => const WeeklySchedulePage()));
+
     if (mounted) {
       await _loadHomeData();
     }
   }
 
+  Future<void> _startSingleExercise(Exercise exercise) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder:
+            (context) => PoseDetectorView(
+          exercises: [exercise],
+          initialIndex: 0,
+          isDarkMode: widget.isDarkMode,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
+    if (_isLoading || _isLoadingExercises) {
       return const Center(child: CircularProgressIndicator());
     }
 
     final accentColor =
-        widget.isDarkMode ? const Color(0xFFCFF500) : const Color(0xFFA66CFF);
-    final cardColor = widget.isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
+    widget.isDarkMode ? const Color(0xFFCFF500) : const Color(0xFFA66CFF);
+    final cardColor =
+    widget.isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
     final textColor = widget.isDarkMode ? Colors.white : Colors.black;
 
     return SafeArea(
       child: RefreshIndicator(
-        onRefresh: _loadHomeData,
+        onRefresh: () async {
+          await _loadExercises();
+          await _loadHomeData();
+        },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16),
@@ -187,13 +251,13 @@ class _HomePageState extends State<HomePage> {
                     radius: 20,
                     backgroundColor: accentColor,
                     backgroundImage:
-                        (widget.avatarUrl != null && widget.avatarUrl!.isNotEmpty)
-                            ? NetworkImage(widget.avatarUrl!)
-                            : null,
+                    (widget.avatarUrl != null && widget.avatarUrl!.isNotEmpty)
+                        ? NetworkImage(widget.avatarUrl!)
+                        : null,
                     child:
-                        (widget.avatarUrl == null || widget.avatarUrl!.isEmpty)
-                            ? const Icon(Icons.person, color: Colors.black)
-                            : null,
+                    (widget.avatarUrl == null || widget.avatarUrl!.isEmpty)
+                        ? const Icon(Icons.person, color: Colors.black)
+                        : null,
                   ),
                 ],
               ),
@@ -230,6 +294,48 @@ class _HomePageState extends State<HomePage> {
                 cardColor: cardColor,
                 onTap: _openPrebuiltPlans,
               ),
+              const SizedBox(height: 20),
+              Text(
+                'Available Exercises',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
+              ),
+              const SizedBox(height: 12),
+              if (_exercises.isEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: cardColor,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    'No exercises available.',
+                    style: TextStyle(color: textColor),
+                  ),
+                )
+              else
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _exercises.length,
+                  itemBuilder: (context, index) {
+                    final exercise = _exercises[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _AvailableExerciseCard(
+                        exercise: exercise,
+                        accentColor: accentColor,
+                        cardColor: cardColor,
+                        textColor: textColor,
+                        isDarkMode: widget.isDarkMode,
+                        onStart: () => _startSingleExercise(exercise),
+                      ),
+                    );
+                  },
+                ),
               const SizedBox(height: 16),
               Row(
                 children: [
@@ -302,11 +408,12 @@ class _TodaysPlanCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final safeIndex =
-        plan.exercises.isEmpty
-            ? 0
-            : currentWorkoutIndex.clamp(0, plan.exercises.length - 1).toInt();
+    plan.exercises.isEmpty
+        ? 0
+        : currentWorkoutIndex.clamp(0, plan.exercises.length - 1).toInt();
+
     final featuredExercise =
-        plan.exercises.isEmpty ? null : plan.exercises[safeIndex];
+    plan.exercises.isEmpty ? null : plan.exercises[safeIndex];
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -337,7 +444,7 @@ class _TodaysPlanCard extends StatelessWidget {
                           ? 'No exercises added yet.'
                           : 'Current focus: ${featuredExercise.displayName}\nExercises: ${plan.exercises.length}',
                       style: TextStyle(
-                        color: textColor.withValues(alpha: 0.68),
+                        color: textColor.withOpacity(0.68),
                         fontSize: 12,
                       ),
                     ),
@@ -374,7 +481,7 @@ class _TodaysPlanCard extends StatelessWidget {
                 final exercise = plan.exercises[index];
                 final totalReps = exercise.sets.fold<int>(
                   0,
-                  (sum, set) => sum + set.reps,
+                      (sum, set) => sum + set.reps,
                 );
                 final setCount = exercise.sets.length;
 
@@ -413,7 +520,7 @@ class _EmptyPlanCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: accentColor.withValues(alpha: 0.25)),
+        border: Border.all(color: accentColor.withOpacity(0.25)),
       ),
       child: Row(
         children: [
@@ -492,7 +599,7 @@ class _RecommendedPlanCard extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             plan.description ?? 'A recommended pre-built plan for today.',
-            style: TextStyle(color: textColor.withValues(alpha: 0.72)),
+            style: TextStyle(color: textColor.withOpacity(0.72)),
           ),
           const SizedBox(height: 14),
           Wrap(
@@ -501,13 +608,14 @@ class _RecommendedPlanCard extends StatelessWidget {
             children: [
               if ((plan.difficulty ?? '').isNotEmpty)
                 Chip(label: Text(plan.difficulty!)),
-              if ((plan.goalTag ?? '').isNotEmpty) Chip(label: Text(plan.goalTag!)),
+              if ((plan.goalTag ?? '').isNotEmpty)
+                Chip(label: Text(plan.goalTag!)),
               Chip(label: Text('${plan.exercises.length} exercises')),
             ],
           ),
           const SizedBox(height: 12),
           ...plan.exercises.take(3).map(
-            (exercise) => Padding(
+                (exercise) => Padding(
               padding: const EdgeInsets.only(bottom: 6),
               child: _ExerciseItem(
                 exercise.displayName,
@@ -565,12 +673,12 @@ class _BrowsePrebuiltCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: cardColor,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: accentColor.withValues(alpha: 0.2)),
+          border: Border.all(color: accentColor.withOpacity(0.2)),
         ),
         child: Row(
           children: [
             CircleAvatar(
-              backgroundColor: accentColor.withValues(alpha: 0.16),
+              backgroundColor: accentColor.withOpacity(0.16),
               child: const Icon(Icons.auto_awesome_outlined, color: Colors.black),
             ),
             const SizedBox(width: 12),
@@ -592,6 +700,84 @@ class _BrowsePrebuiltCard extends StatelessWidget {
             const Icon(Icons.chevron_right_rounded),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _AvailableExerciseCard extends StatelessWidget {
+  const _AvailableExerciseCard({
+    required this.exercise,
+    required this.accentColor,
+    required this.cardColor,
+    required this.textColor,
+    required this.isDarkMode,
+    required this.onStart,
+  });
+
+  final Exercise exercise;
+  final Color accentColor;
+  final Color cardColor;
+  final Color textColor;
+  final bool isDarkMode;
+  final VoidCallback onStart;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: accentColor.withOpacity(0.2)),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: accentColor.withOpacity(0.16),
+            child: const Icon(Icons.fitness_center, color: Colors.black),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  exercise.name,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                    color: textColor,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${exercise.duration} • ${exercise.sets}',
+                  style: TextStyle(
+                    color: textColor.withOpacity(0.7),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  exercise.type.dbValue,
+                  style: TextStyle(
+                    color: textColor.withOpacity(0.55),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: accentColor,
+              foregroundColor: Colors.black,
+            ),
+            onPressed: onStart,
+            child: const Text('Start'),
+          ),
+        ],
       ),
     );
   }

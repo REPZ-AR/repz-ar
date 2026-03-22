@@ -10,7 +10,7 @@ class WorkoutCatalogExercise {
     required this.icon,
     required this.variations,
     this.workoutType,
-    this.assetPath,
+    // this.assetPath,
     this.targetJoints = const <String>[],
     this.defaultReps = 12,
     this.defaultSetCount = 3,
@@ -21,13 +21,13 @@ class WorkoutCatalogExercise {
   final IconData icon;
   final List<String> variations;
   final WorkoutType? workoutType;
-  final String? assetPath;
+  // final String? assetPath;
   final List<String> targetJoints;
   final int defaultReps;
   final int defaultSetCount;
 
   bool get isSupportedForWorkoutFlow =>
-      workoutType != null && assetPath != null && targetJoints.isNotEmpty;
+      workoutType != null && targetJoints.isNotEmpty;
 
   WorkoutPlanExercise createPlanExercise({required int sortOrder}) {
     return WorkoutPlanExercise(
@@ -35,7 +35,7 @@ class WorkoutCatalogExercise {
       exerciseKey: key,
       displayName: name,
       workoutType: workoutType,
-      assetPath: assetPath,
+      // assetPath: assetPath,
       targetJoints: targetJoints,
       sets: List<WorkoutPlanSet>.generate(
         defaultSetCount,
@@ -48,23 +48,23 @@ class WorkoutCatalogExercise {
     );
   }
 
-  Exercise? toRuntimeExercise(WorkoutPlanExercise exercise) {
-    if (!isSupportedForWorkoutFlow || assetPath == null || workoutType == null) {
-      return null;
-    }
-
-    final totalSets = exercise.sets.length;
-    final totalReps = exercise.sets.fold<int>(0, (sum, set) => sum + set.reps);
-
-    return Exercise(
-      name: exercise.displayName,
-      duration: '${(totalSets * 3).clamp(3, 60)} min',
-      sets: '$totalSets sets / $totalReps reps',
-      type: workoutType!,
-      assetPath: assetPath!,
-      targetJoints: targetJoints,
-    );
-  }
+  // Exercise? toRuntimeExercise(WorkoutPlanExercise exercise) {
+  //   if (!isSupportedForWorkoutFlow || assetPath == null || workoutType == null) {
+  //     return null;
+  //   }
+  //
+  //   final totalSets = exercise.sets.length;
+  //   final totalReps = exercise.sets.fold<int>(0, (sum, set) => sum + set.reps);
+  //
+  //   return Exercise(
+  //     name: exercise.displayName,
+  //     duration: '${(totalSets * 3).clamp(3, 60)} min',
+  //     sets: '$totalSets sets / $totalReps reps',
+  //     type: workoutType!,
+  //     // assetPath: assetPath!,
+  //     targetJoints: targetJoints,
+  //   );
+  // }
 }
 
 class WorkoutCatalog {
@@ -87,7 +87,7 @@ class WorkoutCatalog {
           name: 'Hammer Curl',
           icon: Icons.fitness_center,
           workoutType: WorkoutType.curls,
-          assetPath: 'assets/data/baseline_curls.json',
+          // assetPath: 'assets/data/baseline_curls.json',
           targetJoints: <String>['leftShoulder', 'leftElbow', 'leftWrist'],
           variations: <String>[
             'Standard',
@@ -101,7 +101,7 @@ class WorkoutCatalog {
           name: 'Lateral Raise',
           icon: Icons.accessibility_new,
           workoutType: WorkoutType.curls,
-          assetPath: 'assets/data/baseline_curls.json',
+          // assetPath: 'assets/data/baseline_curls.json',
           targetJoints: <String>['leftShoulder', 'leftElbow'],
           variations: commonVariations,
         ),
@@ -110,7 +110,7 @@ class WorkoutCatalog {
           name: 'Bodyweight Squat',
           icon: Icons.airline_seat_recline_normal,
           workoutType: WorkoutType.squats,
-          assetPath: 'assets/data/baseline_squat.json',
+          // assetPath: 'assets/data/baseline_squat.json',
           targetJoints: <String>['leftHip', 'leftKnee', 'leftAnkle'],
           variations: <String>[
             'Standard',
@@ -124,7 +124,7 @@ class WorkoutCatalog {
           name: 'Plank Hold',
           icon: Icons.horizontal_rule,
           workoutType: WorkoutType.planks,
-          assetPath: 'assets/data/baseline_plank.json',
+          // assetPath: 'assets/data/baseline_plank.json',
           targetJoints: <String>['leftShoulder', 'leftHip', 'leftAnkle'],
           variations: <String>['Standard', 'Tempo', 'Single Arm', 'Single Leg'],
           defaultReps: 30,
