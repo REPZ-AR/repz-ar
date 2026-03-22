@@ -18,10 +18,18 @@ const String _classifierLogTag = '[ObjectDetectorClassifier]';
 const int _classifierInputSize = 256;
 const int _classifierAnchors = 12276;
 const int _classifierNumClasses = 14;
+const String _workerTypeInit = 'init';
+const String _workerTypeReady = 'ready';
+const String _workerTypeClassify = 'classify';
+const String _workerTypeResult = 'result';
+const String _workerTypeError = 'error';
+const String _workerTypeShutdown = 'shutdown';
 
-String? _classifyOnBackgroundIsolate(Map<String, Object> request) {
-  final modelPath = request['modelPath'] as String;
-  final labels = List<String>.from(request['labels'] as List<dynamic>);
+String? _classifyWithInterpreter(
+  Interpreter interpreter,
+  List<String> labels,
+  Map<String, Object?> request,
+) {
   final width = request['width'] as int;
   final height = request['height'] as int;
   final boxLeft = request['boxLeft'] as double;
@@ -30,8 +38,6 @@ String? _classifyOnBackgroundIsolate(Map<String, Object> request) {
   final boxHeight = request['boxHeight'] as double;
   final nv21Bytes =
       (request['nv21'] as TransferableTypedData).materialize().asUint8List();
-
-  final interpreter = Interpreter.fromFile(File(modelPath));
   try {
     final rgbImage = img_lib.Image(width: width, height: height);
 
@@ -121,9 +127,63 @@ String? _classifyOnBackgroundIsolate(Map<String, Object> request) {
   } catch (e) {
     print('$_classifierLogTag isolate classification error: $e');
     return null;
-  } finally {
-    interpreter.close();
   }
+}
+
+void _classifierWorkerMain(SendPort mainSendPort) {
+  final commandPort = ReceivePort();
+  mainSendPort.send(commandPort.sendPort);
+
+  Interpreter? interpreter;
+  List<String> labels = const <String>[];
+
+  commandPort.listen((dynamic rawMessage) {
+    if (rawMessage is! Map) return;
+    final message = Map<String, Object?>.from(rawMessage);
+    final type = message['type'];
+
+    try {
+      if (type == _workerTypeInit) {
+        final modelPath = message['modelPath'] as String;
+        labels = List<String>.from(message['labels'] as List<dynamic>);
+        interpreter?.close();
+        interpreter = Interpreter.fromFile(File(modelPath));
+        mainSendPort.send({'type': _workerTypeReady});
+        return;
+      }
+
+      if (type == _workerTypeClassify) {
+        final requestId = message['requestId'] as int;
+        if (interpreter == null) {
+          mainSendPort.send({
+            'type': _workerTypeError,
+            'requestId': requestId,
+            'error': 'Interpreter not initialized',
+          });
+          return;
+        }
+
+        final label = _classifyWithInterpreter(interpreter!, labels, message);
+        mainSendPort.send({
+          'type': _workerTypeResult,
+          'requestId': requestId,
+          'label': label,
+        });
+        return;
+      }
+
+      if (type == _workerTypeShutdown) {
+        interpreter?.close();
+        commandPort.close();
+      }
+    } catch (e) {
+      mainSendPort.send({
+        'type': _workerTypeError,
+        'requestId': message['requestId'],
+        'error': e.toString(),
+      });
+    }
+  });
 }
 
 class ObjectDetectorView extends StatefulWidget {
@@ -151,6 +211,13 @@ class _ObjectDetectorView extends State<ObjectDetectorView> {
   DateTime? _lastClassificationAt;
   bool _isClassificationInFlight = false;
   int _classificationGeneration = 0;
+  Isolate? _classifierWorkerIsolate;
+  ReceivePort? _classifierWorkerReceivePort;
+  StreamSubscription<dynamic>? _classifierWorkerSubscription;
+  SendPort? _classifierWorkerSendPort;
+  Completer<void>? _classifierWorkerReady;
+  int _nextClassifierRequestId = 0;
+  final Map<int, int> _pendingClassificationGenerations = <int, int>{};
   final int NUM_CLASSES = 14;
 
   final _options = {'default': ''};
@@ -163,11 +230,10 @@ class _ObjectDetectorView extends State<ObjectDetectorView> {
     _canProcess = false;
     _classificationGeneration++;
     _objectDetector?.close();
-    _interpreter?.close();
+    unawaited(_stopClassifierWorker());
     super.dispose();
   }
 
-  Interpreter? _interpreter;
   List<String> _labels = [];
   String? _classifierModelPath;
 
@@ -177,56 +243,94 @@ class _ObjectDetectorView extends State<ObjectDetectorView> {
       'assets/ml/gym_equipment_model.tflite',
     );
     print('$_logTag classifier model copied to $_classifierModelPath');
-    _interpreter = await Interpreter.fromAsset(
-      'assets/ml/gym_equipment_model.tflite',
-    );
-    print(
-      '$_logTag interpreter loaded from assets/ml/gym_equipment_model.tflite',
-    );
     // Load labels from a text file
     final labelData = await rootBundle.loadString('assets/labels.txt');
     _labels = labelData.split('\n').where((l) => l.isNotEmpty).toList();
     print('$_logTag loaded ${_labels.length} labels');
-    _printInterpreterDetails();
+    await _startClassifierWorker();
   }
 
-  Future<String?> _classifyDetectedObject(
-    DetectedObject object,
-    CameraImage cameraImage,
-  ) async {
-    print(
-      '$_logTag _classifyDetectedObject called with bounding box ${object.boundingBox}',
+  Future<void> _startClassifierWorker() async {
+    if (_classifierModelPath == null || _labels.isEmpty) return;
+    if (_classifierWorkerSendPort != null) return;
+
+    final receivePort = ReceivePort();
+    _classifierWorkerReceivePort = receivePort;
+    _classifierWorkerReady = Completer<void>();
+    _classifierWorkerSubscription = receivePort.listen((dynamic message) {
+      if (message is SendPort) {
+        _classifierWorkerSendPort = message;
+        message.send({
+          'type': _workerTypeInit,
+          'modelPath': _classifierModelPath!,
+          'labels': List<String>.from(_labels),
+        });
+        return;
+      }
+      if (message is! Map) return;
+      final workerMessage = Map<String, Object?>.from(message);
+      final type = workerMessage['type'];
+      if (type == _workerTypeReady) {
+        if (!(_classifierWorkerReady?.isCompleted ?? true)) {
+          _classifierWorkerReady?.complete();
+        }
+        return;
+      }
+      unawaited(_handleWorkerResponse(workerMessage));
+    });
+
+    _classifierWorkerIsolate = await Isolate.spawn(
+      _classifierWorkerMain,
+      receivePort.sendPort,
     );
-    if (_classifierModelPath == null || _labels.isEmpty) {
-      print('$_logTag classifier not ready');
-      return null;
-    }
 
     try {
-      final box = object.boundingBox;
-      final request = <String, Object>{
-        'modelPath': _classifierModelPath!,
-        'labels': List<String>.from(_labels),
-        'width': cameraImage.width,
-        'height': cameraImage.height,
-        'boxLeft': box.left,
-        'boxTop': box.top,
-        'boxWidth': box.width,
-        'boxHeight': box.height,
-        // Copy bytes before isolate hop to avoid reusing camera buffers.
-        'nv21': TransferableTypedData.fromList([
-          Uint8List.fromList(cameraImage.planes[0].bytes),
-        ]),
-      };
-
-      final label = await Isolate.run(
-        () => _classifyOnBackgroundIsolate(request),
-      );
-      print('$_logTag TF Lite classification result: $label');
-      return label;
+      await _classifierWorkerReady!.future.timeout(const Duration(seconds: 5));
+      print('$_logTag classifier worker ready');
     } catch (e) {
-      print('$_logTag classification error: $e');
-      return null;
+      print('$_logTag classifier worker failed to start: $e');
+      await _stopClassifierWorker();
+    }
+  }
+
+  Future<void> _stopClassifierWorker() async {
+    _classifierWorkerSendPort?.send({'type': _workerTypeShutdown});
+    _classifierWorkerSendPort = null;
+    _classifierWorkerReady = null;
+    _pendingClassificationGenerations.clear();
+    _isClassificationInFlight = false;
+
+    await _classifierWorkerSubscription?.cancel();
+    _classifierWorkerSubscription = null;
+    _classifierWorkerReceivePort?.close();
+    _classifierWorkerReceivePort = null;
+    _classifierWorkerIsolate?.kill(priority: Isolate.immediate);
+    _classifierWorkerIsolate = null;
+  }
+
+  Future<void> _handleWorkerResponse(Map<String, Object?> message) async {
+    final type = message['type'];
+    if (type == _workerTypeResult) {
+      final requestId = message['requestId'] as int;
+      final generation = _pendingClassificationGenerations.remove(requestId);
+      _isClassificationInFlight = false;
+      if (generation == null) return;
+      if (!mounted || generation != _classificationGeneration) return;
+
+      final label = message['label'] as String?;
+      if (label == null || label.trim().isEmpty) return;
+      print('$_logTag showing overlay for $label');
+      await _showEquipmentOverlay(label);
+      return;
+    }
+
+    if (type == _workerTypeError) {
+      final requestId = message['requestId'] as int?;
+      if (requestId != null) {
+        _pendingClassificationGenerations.remove(requestId);
+      }
+      _isClassificationInFlight = false;
+      print('$_logTag classifier worker error: ${message['error']}');
     }
   }
 
@@ -246,24 +350,32 @@ class _ObjectDetectorView extends State<ObjectDetectorView> {
     _isClassificationInFlight = true;
     _lastClassificationAt = DateTime.now();
     final generation = _classificationGeneration;
+    final workerPort = _classifierWorkerSendPort;
+    if (workerPort == null) {
+      print('$_logTag skipped classification: worker not ready');
+      _isClassificationInFlight = false;
+      return;
+    }
+
+    final requestId = ++_nextClassifierRequestId;
+    _pendingClassificationGenerations[requestId] = generation;
+    final box = object.boundingBox;
 
     print('$_logTag dispatching background classification');
-    unawaited(
-      _classifyDetectedObject(object, cameraImage)
-          .then((equipmentName) async {
-            if (!mounted || generation != _classificationGeneration) return;
-            if (equipmentName == null) return;
-            print('$_logTag showing overlay for $equipmentName');
-            await _showEquipmentOverlay(equipmentName);
-          })
-          .catchError((Object e, StackTrace st) {
-            print('$_logTag background classification failed: $e\n$st');
-          })
-          .whenComplete(() {
-            _isClassificationInFlight = false;
-            print('$_logTag background classification finished');
-          }),
-    );
+    workerPort.send({
+      'type': _workerTypeClassify,
+      'requestId': requestId,
+      'width': cameraImage.width,
+      'height': cameraImage.height,
+      'boxLeft': box.left,
+      'boxTop': box.top,
+      'boxWidth': box.width,
+      'boxHeight': box.height,
+      // Copy bytes before isolate hop to avoid reusing camera buffers.
+      'nv21': TransferableTypedData.fromList([
+        Uint8List.fromList(cameraImage.planes[0].bytes),
+      ]),
+    });
   }
 
   Future<void> _showEquipmentOverlay(String equipmentName) async {
@@ -403,21 +515,6 @@ class _ObjectDetectorView extends State<ObjectDetectorView> {
     }
   }
 
-  void _printInterpreterDetails() {
-    if (_interpreter == null) return;
-
-    final inputTensor = _interpreter!.getInputTensor(0);
-    final outputTensors = [
-      _interpreter!.getOutputTensor(0),
-      _interpreter!.getOutputTensor(1),
-    ];
-
-    print('Input shape: ${inputTensor.shape}');
-    print('Input type: ${inputTensor.type}');
-    print('Output 0 shape: ${outputTensors[0].shape}');
-    print('Output 1 shape: ${outputTensors[1].shape}');
-  }
-
   void _initializeDetector() async {
     print(
       '$_logTag _initializeDetector started with option=$_option mode=$_mode',
@@ -428,6 +525,7 @@ class _ObjectDetectorView extends State<ObjectDetectorView> {
     _lastCameraImage = null;
     _isClassificationInFlight = false;
     _classificationGeneration++;
+    await _stopClassifierWorker();
     print('Set detector in mode: $_mode');
 
     if (_option == 0) {
@@ -440,7 +538,7 @@ class _ObjectDetectorView extends State<ObjectDetectorView> {
       );
       _objectDetector = ObjectDetector(options: options);
       print('$_logTag default object detector initialized');
-      _initClassifier();
+      await _initClassifier();
     } else if (_option > 0 && _option <= _options.length) {
       // use a custom model
       // make sure to add tflite model to assets/ml
