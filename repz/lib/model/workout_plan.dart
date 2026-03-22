@@ -194,3 +194,112 @@ class WorkoutPlan {
     );
   }
 }
+
+class WorkoutPlanScheduleEntry {
+  const WorkoutPlanScheduleEntry({
+    this.id,
+    required this.userId,
+    required this.dayOfWeek,
+    required this.workoutPlanId,
+    this.plan,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  final String? id;
+  final String userId;
+  final int dayOfWeek;
+  final String workoutPlanId;
+  final WorkoutPlan? plan;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  factory WorkoutPlanScheduleEntry.fromMap(Map<String, dynamic> map) {
+    final nestedPlan = map['workout_plans'] as Map<String, dynamic>?;
+
+    return WorkoutPlanScheduleEntry(
+      id: map['id'] as String?,
+      userId: map['user_id'] as String,
+      dayOfWeek: map['day_of_week'] as int,
+      workoutPlanId: map['workout_plan_id'] as String,
+      plan: nestedPlan == null ? null : WorkoutPlan.fromMap(nestedPlan),
+      createdAt: DateTime.parse(map['created_at'] as String),
+      updatedAt: DateTime.parse(map['updated_at'] as String),
+    );
+  }
+}
+
+class PrebuiltWorkoutPlan {
+  const PrebuiltWorkoutPlan({
+    required this.id,
+    required this.name,
+    this.description,
+    this.difficulty,
+    this.goalTag,
+    required this.isFeatured,
+    required this.createdAt,
+    required this.updatedAt,
+    required this.exercises,
+  });
+
+  final String id;
+  final String name;
+  final String? description;
+  final String? difficulty;
+  final String? goalTag;
+  final bool isFeatured;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final List<WorkoutPlanExercise> exercises;
+
+  factory PrebuiltWorkoutPlan.fromMap(Map<String, dynamic> map) {
+    final rawExercises =
+        (map['prebuilt_workout_plan_exercises'] as List<dynamic>? ??
+                const <dynamic>[])
+            .cast<Map<String, dynamic>>();
+
+    rawExercises.sort(
+      (a, b) => (a['sort_order'] as int? ?? 0).compareTo(
+        b['sort_order'] as int? ?? 0,
+      ),
+    );
+
+    return PrebuiltWorkoutPlan(
+      id: map['id'] as String,
+      name: (map['name'] as String?) ?? 'Pre-built Plan',
+      description: map['description'] as String?,
+      difficulty: map['difficulty'] as String?,
+      goalTag: map['goal_tag'] as String?,
+      isFeatured: map['is_featured'] as bool? ?? false,
+      createdAt: DateTime.parse(map['created_at'] as String),
+      updatedAt: DateTime.parse(map['updated_at'] as String),
+      exercises: rawExercises.map(_prebuiltExerciseFromMap).toList(),
+    );
+  }
+}
+
+WorkoutPlanExercise _prebuiltExerciseFromMap(Map<String, dynamic> map) {
+  final rawSets =
+      (map['prebuilt_workout_plan_sets'] as List<dynamic>? ?? const <dynamic>[])
+          .cast<Map<String, dynamic>>();
+
+  rawSets.sort(
+    (a, b) => (a['sort_order'] as int? ?? 0).compareTo(
+      b['sort_order'] as int? ?? 0,
+    ),
+  );
+
+  return WorkoutPlanExercise(
+    id: map['id'] as String?,
+    sortOrder: map['sort_order'] as int? ?? 0,
+    exerciseKey: (map['exercise_key'] as String?) ?? '',
+    displayName: (map['display_name'] as String?) ?? '',
+    workoutType: WorkoutType.fromDbValue(map['workout_type'] as String?),
+    assetPath: map['asset_path'] as String?,
+    targetJoints:
+        (map['target_joints'] as List<dynamic>? ?? const <dynamic>[])
+            .map((joint) => joint.toString())
+            .toList(),
+    sets: rawSets.map(WorkoutPlanSet.fromMap).toList(),
+  );
+}

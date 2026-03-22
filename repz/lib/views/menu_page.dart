@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:repz/views/prebuilt_workout_plans_page.dart';
 import 'package:repz/views/saved_workout_plans_page.dart';
+import 'package:repz/views/weekly_schedule_page.dart';
 
 class MenuPage extends StatelessWidget {
   final bool isDarkMode;
@@ -180,29 +182,83 @@ class MenuPage extends StatelessWidget {
                 color: cardColor,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: accentColor.withValues(alpha: 0.18),
-                  child: Icon(
-                    Icons.playlist_play_rounded,
-                    color: isDarkMode ? accentColor : Colors.black,
-                  ),
-                ),
-                title: const Text(
-                  'Saved Plans',
-                  style: TextStyle(fontWeight: FontWeight.w700),
-                ),
-                subtitle: const Text(
-                  'Open, edit, and start your saved workout plans',
-                ),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const SavedWorkoutPlansPage(),
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: accentColor.withValues(alpha: 0.18),
+                      child: Icon(
+                        Icons.playlist_play_rounded,
+                        color: isDarkMode ? accentColor : Colors.black,
+                      ),
                     ),
-                  );
-                },
+                    title: const Text(
+                      'Saved Plans',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    subtitle: const Text(
+                      'Open, edit, and start your saved workout plans',
+                    ),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const SavedWorkoutPlansPage(),
+                        ),
+                      );
+                    },
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: accentColor.withValues(alpha: 0.18),
+                      child: Icon(
+                        Icons.calendar_today_outlined,
+                        color: isDarkMode ? accentColor : Colors.black,
+                      ),
+                    ),
+                    title: const Text(
+                      'Weekly Schedule',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    subtitle: const Text(
+                      'Set which plan you want to follow on each weekday',
+                    ),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const WeeklySchedulePage(),
+                        ),
+                      );
+                    },
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: accentColor.withValues(alpha: 0.18),
+                      child: Icon(
+                        Icons.auto_awesome_outlined,
+                        color: isDarkMode ? accentColor : Colors.black,
+                      ),
+                    ),
+                    title: const Text(
+                      'Pre-built Plans',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    subtitle: const Text(
+                      'Browse curated plans and copy them into your routine',
+                    ),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const PrebuiltWorkoutPlansPage(),
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ),
             ),
           ],

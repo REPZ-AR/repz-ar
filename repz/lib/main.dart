@@ -87,8 +87,12 @@ class ProfileRepositoryGateway implements ProfileGateway {
 }
 
 abstract class WorkoutGateway {
-  Future<int> fetchWorkoutProgress(String userId);
-  Future<void> syncWorkoutProgress(String userId, int index);
+  Future<int> fetchWorkoutProgress(String userId, {String? workoutPlanId});
+  Future<void> syncWorkoutProgress(
+    String userId,
+    int index, {
+    String? workoutPlanId,
+  });
 }
 
 class WorkoutRepositoryGateway implements WorkoutGateway {
@@ -98,13 +102,24 @@ class WorkoutRepositoryGateway implements WorkoutGateway {
   final WorkoutRepository _repository;
 
   @override
-  Future<int> fetchWorkoutProgress(String userId) {
-    return _repository.fetchWorkoutProgress(userId);
+  Future<int> fetchWorkoutProgress(String userId, {String? workoutPlanId}) {
+    return _repository.fetchWorkoutProgress(
+      userId,
+      workoutPlanId: workoutPlanId,
+    );
   }
 
   @override
-  Future<void> syncWorkoutProgress(String userId, int index) {
-    return _repository.syncWorkoutProgress(userId, index);
+  Future<void> syncWorkoutProgress(
+    String userId,
+    int index, {
+    String? workoutPlanId,
+  }) {
+    return _repository.syncWorkoutProgress(
+      userId,
+      index,
+      workoutPlanId: workoutPlanId,
+    );
   }
 }
 
@@ -168,6 +183,13 @@ class AuthGate extends StatefulWidget {
   final AuthGateway? authGateway;
   final ProfileGateway? profileGateway;
   final WorkoutGateway? workoutGateway;
+  final Widget Function(
+    User user,
+    Profile? profile,
+    WorkoutGateway workoutGateway,
+    Future<void> Function()? onLogout,
+  )?
+  mainPageBuilder;
 
   const AuthGate({
     Key? key,
@@ -176,6 +198,7 @@ class AuthGate extends StatefulWidget {
     this.authGateway,
     this.profileGateway,
     this.workoutGateway,
+    this.mainPageBuilder,
   }) : super(key: key);
 
   @override
@@ -187,6 +210,7 @@ class _AuthGateState extends State<AuthGate> {
   bool _profileLoading = false;
   Profile? _profile;
   String? _profileError;
+  String? _profileRequestedUserId;
 
   late final AuthGateway _authGateway =
       widget.authGateway ?? AuthRepositoryGateway();
@@ -243,6 +267,7 @@ class _AuthGateState extends State<AuthGate> {
     setState(() {
       _profileLoading = true;
       _profileError = null;
+      _profileRequestedUserId = user.id;
     });
 
     try {
@@ -357,7 +382,10 @@ class _AuthGateState extends State<AuthGate> {
         }
 
         final user = session.user;
-        if (_profile?.userId != user.id && !_profileLoading) {
+        final needsCurrentUserProfile = _profile?.userId != user.id;
+        final awaitingProfileRequest = _profileRequestedUserId != user.id;
+
+        if (needsCurrentUserProfile && !_profileLoading) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) {
               _loadProfileFlag(user);
@@ -365,13 +393,14 @@ class _AuthGateState extends State<AuthGate> {
           });
         }
 
-        if (_profileLoading && _profile?.userId != user.id) {
+        if (needsCurrentUserProfile &&
+            (_profileLoading || awaitingProfileRequest)) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
 
-        if (_profileError != null && _profile?.userId != user.id) {
+        if (_profileError != null && needsCurrentUserProfile) {
           return Scaffold(
             body: Center(
               child: Padding(
@@ -421,6 +450,16 @@ class _AuthGateState extends State<AuthGate> {
             (metadata?['full_name'] as String?) ??
             (metadata?['name'] as String?);
         final isCoach = _profile?.mode == ProfileMode.trainer;
+        final mainPageBuilder = widget.mainPageBuilder;
+        if (mainPageBuilder != null) {
+          return mainPageBuilder(
+            user,
+            _profile,
+            _workoutGateway,
+            _loading ? null : _signOut,
+          );
+        }
+
         return MainPage(
           isDarkMode: widget.isDarkMode,
           isCoach: isCoach,
