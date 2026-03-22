@@ -376,14 +376,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.11.1"
-  google_mlkit_image_labeling:
-    dependency: "direct main"
-    description:
-      name: google_mlkit_image_labeling
-      sha256: d744d1844c674aae860262f3bb22f5628fd96eaa9d482e6b8d64974efd003dac
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.14.2"
   google_mlkit_object_detection:
     dependency: "direct main"
     description:
@@ -990,7 +982,7 @@ packages:
     source: hosted
     version: "2.3.1"
   url_launcher:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: url_launcher
       sha256: f6a7e5c4835bb4e3026a04793a4199ca2d14c739ec378fdfe23fc8075d0439f8
