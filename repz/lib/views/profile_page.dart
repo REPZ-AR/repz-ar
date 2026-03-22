@@ -9,6 +9,7 @@ import '../widgets/layouts/menu_card.dart';
 import '../widgets/layouts/profile_card.dart';
 import '../widgets/layouts/settings_sheet.dart';
 import '../widgets/layouts/badges_card.dart';
+import 'add_friend.dart';
 
 class ProfilePage extends StatefulWidget {
   final bool isDarkMode;
@@ -148,7 +149,9 @@ class _ProfilePageState extends State<ProfilePage> {
               friends: _friends,
               isLoading: _friendsLoading,
               onAddFriend: () {
-                // TODO: navigate to AddFriendPage
+                Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => AddFriendPage(isDarkMode: widget.isDarkMode),
+                ));
               },
               onFriendTap: (friend) {
                 // TODO: open friend profile

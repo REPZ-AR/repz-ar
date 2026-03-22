@@ -153,4 +153,15 @@ class FriendService {
           'and(requester_id.eq.$friendId,receiver_id.eq.$_userId)',
     );
   }
+
+  // Add this method to FriendService
+  Future<int> fetchPendingRequestCount() async {
+    final result = await _supabase
+        .from('friendships')
+        .select('id')
+        .eq('receiver_id', _userId)
+        .eq('status', 'pending');
+
+    return (result as List).length;
+  }
 }
