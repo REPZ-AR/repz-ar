@@ -71,15 +71,17 @@ class _MainPageState extends State<MainPage>
     _pages = {
       0: widget.isCoach
           ? TrainerHomePage(
-              isDarkMode: widget.isDarkMode,
-              avatarUrl: widget.avatarUrl,
-            )
+        isDarkMode: widget.isDarkMode,
+        avatarUrl: widget.avatarUrl,
+        userName: widget.userName,
+        onNavigateToClients: () => setState(() => _selectedIndex = 1),
+      )
           : HomePage(
-              isDarkMode: widget.isDarkMode,
-              avatarUrl: widget.avatarUrl,
-              userId: widget.userId,
-              workoutGateway: widget.workoutGateway,
-            ),
+        isDarkMode: widget.isDarkMode,
+        avatarUrl: widget.avatarUrl,
+        userId: widget.userId,
+        workoutGateway: widget.workoutGateway,
+      ),
       1: widget.isCoach
           ? ClientManagementPage(
         isDarkMode: widget.isDarkMode,

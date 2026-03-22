@@ -123,6 +123,7 @@ class ClientCard extends StatelessWidget {
                 // ── Card content ───────────────────────────────
                 Expanded(
                   child: Column(
+                  mainAxisSize: MainAxisSize.min,
                     children: [
                       // ── Row (always visible) ─────────────────
                       InkWell(
