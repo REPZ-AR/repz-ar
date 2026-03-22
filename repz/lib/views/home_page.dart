@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:repz/main.dart';
-import 'package:repz/model/workout.dart';
 import 'package:repz/model/workout_plan.dart';
-import 'package:repz/repositories/exercise_repository.dart';
 import 'package:repz/repositories/workout_plan_repository.dart';
-import 'package:repz/views/pose_detector_view.dart';
 import 'package:repz/views/prebuilt_workout_plans_page.dart';
 import 'package:repz/views/weekly_schedule_page.dart';
 import 'package:repz/views/workout_plan_helpers.dart';
@@ -35,15 +32,11 @@ class _HomePageState extends State<HomePage> {
   WorkoutPlan? _todaysPlan;
   PrebuiltWorkoutPlan? _recommendedPlan;
 
-  List<Exercise> _exercises = [];
-  bool _isLoadingExercises = true;
-
   int get _todayWeekday => DateTime.now().weekday;
 
   @override
   void initState() {
     super.initState();
-    _loadExercises();
     _loadHomeData();
   }
 
@@ -93,34 +86,6 @@ class _HomePageState extends State<HomePage> {
       if (mounted) {
         setState(() => _isLoading = false);
       }
-    }
-  }
-
-  Future<void> _loadExercises() async {
-    try {
-      final repo = ExerciseRepository();
-      final data = await repo.fetchExercises();
-
-      if (!mounted) return;
-
-      setState(() {
-        _exercises = data;
-        _isLoadingExercises = false;
-      });
-    } catch (e) {
-      debugPrint('Error loading exercises: $e');
-
-      if (!mounted) return;
-
-      setState(() {
-        _isLoadingExercises = false;
-      });
-
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(content: Text('Could not load exercises.')),
-        );
     }
   }
 
@@ -202,7 +167,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading || _isLoadingExercises) {
+    if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
 
@@ -214,10 +179,7 @@ class _HomePageState extends State<HomePage> {
 
     return SafeArea(
       child: RefreshIndicator(
-        onRefresh: () async {
-          await _loadExercises();
-          await _loadHomeData();
-        },
+        onRefresh: _loadHomeData,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16),
@@ -328,6 +290,455 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _TodaysPlanCard extends StatelessWidget {
+  const _TodaysPlanCard({
+    required this.plan,
+    required this.currentWorkoutIndex,
+    required this.accentColor,
+    required this.cardColor,
+    required this.textColor,
+    required this.onStart,
+  });
+
+  final WorkoutPlan plan;
+  final int currentWorkoutIndex;
+  final Color accentColor;
+  final Color cardColor;
+  final Color textColor;
+  final VoidCallback onStart;
+
+  @override
+  Widget build(BuildContext context) {
+    final safeIndex =
+    plan.exercises.isEmpty
+        ? 0
+        : currentWorkoutIndex.clamp(0, plan.exercises.length - 1).toInt();
+
+    final featuredExercise =
+    plan.exercises.isEmpty ? null : plan.exercises[safeIndex];
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: accentColor, width: 2),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      plan.name,
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      featuredExercise == null
+                          ? 'No exercises added yet.'
+                          : 'Current focus: ${featuredExercise.displayName}\nExercises: ${plan.exercises.length}',
+                      style: TextStyle(
+                        color: textColor.withOpacity(0.68),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              GestureDetector(
+                onTap: onStart,
+                child: Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: accentColor,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.play_arrow,
+                    color: Colors.black,
+                    size: 32,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 220),
+            child: ListView.builder(
+              shrinkWrap: true,
+              physics: const BouncingScrollPhysics(),
+              itemCount: plan.exercises.length,
+              itemBuilder: (context, index) {
+                final exercise = plan.exercises[index];
+                final totalReps = exercise.sets.fold<int>(
+                  0,
+                      (sum, set) => sum + set.reps,
+                );
+                final setCount = exercise.sets.length;
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: _ExerciseItem(
+                    exercise.displayName,
+                    '${(setCount * 3).clamp(3, 60)} min',
+                    '$setCount sets / $totalReps reps',
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyPlanCard extends StatelessWidget {
+  const _EmptyPlanCard({
+    required this.accentColor,
+    required this.cardColor,
+    required this.onOpenSchedule,
+  });
+
+  final Color accentColor;
+  final Color cardColor;
+  final VoidCallback onOpenSchedule;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: accentColor.withOpacity(0.25)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'No active plan for today',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Set one of your saved plans for this weekday to see it here.',
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          OutlinedButton(
+            onPressed: onOpenSchedule,
+            child: const Text('Schedule'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RecommendedPlanCard extends StatelessWidget {
+  const _RecommendedPlanCard({
+    required this.plan,
+    required this.accentColor,
+    required this.cardColor,
+    required this.textColor,
+    required this.onFollow,
+    required this.onViewPlans,
+  });
+
+  final PrebuiltWorkoutPlan plan;
+  final Color accentColor;
+  final Color cardColor;
+  final Color textColor;
+  final VoidCallback onFollow;
+  final VoidCallback onViewPlans;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: accentColor, width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'No active plans for today. Would you like to follow this plan?',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: textColor,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            plan.name,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w900,
+              color: textColor,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            plan.description ?? 'A recommended pre-built plan for today.',
+            style: TextStyle(color: textColor.withOpacity(0.72)),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if ((plan.difficulty ?? '').isNotEmpty)
+                Chip(label: Text(plan.difficulty!)),
+              if ((plan.goalTag ?? '').isNotEmpty)
+                Chip(label: Text(plan.goalTag!)),
+              Chip(label: Text('${plan.exercises.length} exercises')),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...plan.exercises.take(3).map(
+                (exercise) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: _ExerciseItem(
+                exercise.displayName,
+                '${exercise.sets.length} sets',
+                '${exercise.sets.fold<int>(0, (sum, set) => sum + set.reps)} reps',
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton(
+                  onPressed: onFollow,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: accentColor,
+                    foregroundColor: Colors.black,
+                  ),
+                  child: const Text('Follow Plan'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: onViewPlans,
+                  child: const Text('View Plans'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BrowsePrebuiltCard extends StatelessWidget {
+  const _BrowsePrebuiltCard({
+    required this.accentColor,
+    required this.cardColor,
+    required this.onTap,
+  });
+
+  final Color accentColor;
+  final Color cardColor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Ink(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: accentColor.withOpacity(0.2)),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: accentColor.withOpacity(0.16),
+              child: const Icon(Icons.auto_awesome_outlined, color: Colors.black),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Explore pre-built plans',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Browse curated templates and copy one into your own schedule.',
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ExerciseItem extends StatelessWidget {
+  final String name;
+  final String duration;
+  final String sets;
+
+  const _ExerciseItem(this.name, this.duration, this.sets);
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(
+          child: Text(
+            name,
+            style: const TextStyle(fontWeight: FontWeight.w500),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text(duration, style: const TextStyle(fontSize: 12)),
+        const SizedBox(width: 10),
+        Text(sets, style: const TextStyle(fontSize: 12)),
+      ],
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final Color accentColor;
+  final bool isDarkMode;
+
+  const _StatCard({
+    required this.title,
+    required this.value,
+    required this.accentColor,
+    required this.isDarkMode,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cardColor = isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: accentColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final String subtitle;
+  final bool isDarkMode;
+
+  const _InfoCard({
+    required this.title,
+    required this.value,
+    required this.subtitle,
+    required this.isDarkMode,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cardColor = isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.grey,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          if (subtitle.isNotEmpty)
+            Text(
+              subtitle,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+        ],
       ),
     );
   }
