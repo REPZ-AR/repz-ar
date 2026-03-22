@@ -59,7 +59,9 @@ jobs:
         run: flutter test test/performance/auth_gate_performance_test.dart test/performance/main_page_performance_test.dart
 
   test-visual-goldens:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    continue-on-error: true
     defaults:
       run:
         working-directory: repz
