@@ -1,24 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:repz/model/workout.dart';
-import 'package:repz/model/workout_catalog.dart';
 import 'package:repz/model/workout_plan.dart';
+import 'package:repz/repositories/exercise_repository.dart';
 import 'package:repz/repositories/workout_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'pose_detector_view.dart';
 
 class WorkoutPlanHelpers {
-  static List<WorkoutCatalogExercise> supportedExercisesForPlan(WorkoutPlan plan) {
-    final exercises = <WorkoutCatalogExercise>[];
+  static Future<List<Exercise>> supportedExercisesForPlan(
+      WorkoutPlan plan,
+      ) async {
+    final exerciseIds =
+    plan.exercises
+        .map((e) => e.exerciseKey)
+        .where((id) => id.isNotEmpty)
+        .toList();
 
+    final repo = ExerciseRepository();
+    final dbExercises = await repo.fetchExercisesByIds(exerciseIds);
+
+    final byId = <String, Exercise>{
+      for (final exercise in dbExercises) exercise.id: exercise,
+    };
+
+    final orderedExercises = <Exercise>[];
     for (final planExercise in plan.exercises) {
-      final catalogExercise = WorkoutCatalog.byKey(planExercise.exerciseKey);
-      if (catalogExercise != null && catalogExercise.isSupportedForWorkoutFlow) {
-        exercises.add(catalogExercise);
+      final match = byId[planExercise.exerciseKey];
+      if (match != null) {
+        orderedExercises.add(match);
       }
     }
 
-    return exercises;
+    return orderedExercises;
   }
 
   static Future<bool> startPlan(
@@ -28,9 +42,10 @@ class WorkoutPlanHelpers {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final userId = Supabase.instance.client.auth.currentUser?.id;
     final workoutRepository = WorkoutRepository();
-    final supportedCatalogExercises = supportedExercisesForPlan(plan);
 
-    if (supportedCatalogExercises.isEmpty) {
+    final exercises = await supportedExercisesForPlan(plan);
+
+    if (exercises.isEmpty) {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
@@ -51,16 +66,27 @@ class WorkoutPlanHelpers {
       workoutPlanId: plan.id,
     );
 
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Plan launch is being migrated to Supabase exercise data. Start workouts from the DB-backed exercise flow for now.',
-          ),
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder:
+            (context) => PoseDetectorView(
+          exercises: exercises,
+          initialIndex: initialIndex,
+          onProgressSaved:
+          userId == null || plan.id == null
+              ? null
+              : (savedIndex) async {
+            await workoutRepository.syncWorkoutProgress(
+              userId,
+              savedIndex,
+              workoutPlanId: plan.id,
+            );
+          },
+          isDarkMode: isDarkMode,
         ),
-      );
+      ),
+    );
 
-    return false;
+    return true;
   }
 }
