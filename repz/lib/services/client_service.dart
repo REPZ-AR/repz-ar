@@ -17,7 +17,7 @@ class ClientService {
 
     return (result as List).map((row) => Client(
       id: row['client_id'] as String,
-      name: 'Client',
+      name: 'Client ${(row['client_id'] as String).substring(0, 6)}',
       subtitle: row['client_type'] == 'online' ? 'Online' : 'Gym',
       avatarUrl: null,
     )).toList();

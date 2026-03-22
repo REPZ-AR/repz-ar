@@ -13,12 +13,6 @@ class WeeklySchedulePage extends StatefulWidget {
 }
 
 class _WeeklySchedulePageState extends State<WeeklySchedulePage> {
-  final WorkoutPlanRepository _repository = WorkoutPlanRepository();
-  bool _isLoading = true;
-  List<WorkoutPlan> _plans = const <WorkoutPlan>[];
-  Map<int, WorkoutPlanScheduleEntry> _scheduleByDay =
-      const <int, WorkoutPlanScheduleEntry>{};
-
   static const Map<int, String> _weekdayLabels = <int, String>{
     DateTime.monday: 'Monday',
     DateTime.tuesday: 'Tuesday',
@@ -29,6 +23,13 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage> {
     DateTime.sunday: 'Sunday',
   };
 
+  final WorkoutPlanRepository _repository = WorkoutPlanRepository();
+  bool _isLoading = true;
+  List<WorkoutPlan> _plans = const <WorkoutPlan>[];
+  List<WorkoutScheduleProfile> _profiles = const <WorkoutScheduleProfile>[];
+  WorkoutScheduleProfile? _selectedProfile;
+  Map<int, String?> _dayToPlanId = <int, String?>{};
+
   @override
   void initState() {
     super.initState();
@@ -38,21 +39,27 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage> {
   Future<void> _load() async {
     setState(() => _isLoading = true);
     try {
-      final results = await Future.wait([
-        _repository.fetchPlans(),
-        _repository.fetchSchedule(),
-      ]);
-
-      final plans = results[0] as List<WorkoutPlan>;
-      final schedule = results[1] as List<WorkoutPlanScheduleEntry>;
+      final selfProfile = await _repository.ensureSelfScheduleProfile();
+      final plans = await _repository.fetchPlans();
+      final profiles = await _repository.fetchScheduleProfiles();
 
       if (!mounted) return;
       setState(() {
         _plans = plans;
-        _scheduleByDay = {
-          for (final entry in schedule) entry.dayOfWeek: entry,
-        };
+        _profiles = profiles;
       });
+
+      final selected =
+          _selectedProfile == null
+              ? profiles.firstWhere(
+                (profile) => profile.id == selfProfile.id,
+                orElse: () => selfProfile,
+              )
+              : profiles.firstWhere(
+                (profile) => profile.id == _selectedProfile!.id,
+                orElse: () => selfProfile,
+              );
+      _selectProfile(selected);
     } on PostgrestException catch (error) {
       _showMessage(error.message);
     } catch (_) {
@@ -64,6 +71,21 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage> {
     }
   }
 
+  void _selectProfile(WorkoutScheduleProfile profile) {
+    _selectedProfile = profile;
+    _dayToPlanId = {
+      for (final day in _weekdayLabels.keys)
+        day: profile.days
+            .where((entry) => entry.dayOfWeek == day)
+            .map((entry) => entry.workoutPlanId)
+            .cast<String?>()
+            .firstOrNull,
+    };
+  }
+
+  bool get _canEditSelectedProfile =>
+      _selectedProfile?.sourceType == ScheduleProfileSourceType.self;
+
   void _showMessage(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
@@ -71,19 +93,36 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Future<void> _setSchedule(int dayOfWeek, String? workoutPlanId) async {
+  Future<void> _saveSelfSchedule() async {
+    final profile = _selectedProfile;
+    if (profile == null || !_canEditSelectedProfile) return;
+
     try {
-      await _repository.setScheduleForDay(dayOfWeek, workoutPlanId);
-      await _load();
-      _showMessage(
-        workoutPlanId == null
-            ? '${_weekdayLabels[dayOfWeek]} cleared.'
-            : '${_weekdayLabels[dayOfWeek]} updated.',
+      await _repository.saveScheduleProfileDays(
+        profileId: profile.id,
+        dayToPlanId: _dayToPlanId,
       );
+      await _load();
+      _showMessage('Schedule updated.');
     } on PostgrestException catch (error) {
       _showMessage(error.message);
     } catch (_) {
       _showMessage('Could not update the schedule.');
+    }
+  }
+
+  Future<void> _activateSelectedProfile() async {
+    final profile = _selectedProfile;
+    if (profile == null) return;
+
+    try {
+      await _repository.activateScheduleProfile(profile.id);
+      await _load();
+      _showMessage('"${profile.name}" is now your active schedule.');
+    } on PostgrestException catch (error) {
+      _showMessage(error.message);
+    } catch (_) {
+      _showMessage('Could not activate this schedule.');
     }
   }
 
@@ -113,142 +152,205 @@ class _WeeklySchedulePageState extends State<WeeklySchedulePage> {
         icon: const Icon(Icons.add),
         label: const Text('New Plan'),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _load,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: cardColor,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : RefreshIndicator(
+                onRefresh: _load,
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: cardColor,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Choose the schedule you want to follow',
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                          const SizedBox(height: 6),
+                          const Text(
+                            'Your Home tab always follows the schedule profile marked active below.',
+                          ),
+                          const SizedBox(height: 14),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children:
+                                _profiles.map((profile) {
+                                  final isSelected =
+                                      _selectedProfile?.id == profile.id;
+                                  final isActive = profile.isActive;
+                                  return ChoiceChip(
+                                    selected: isSelected,
+                                    label: Text(
+                                      isActive
+                                          ? '${profile.name} • Active'
+                                          : profile.name,
+                                    ),
+                                    onSelected: (_) {
+                                      setState(() => _selectProfile(profile));
+                                    },
+                                  );
+                                }).toList(),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
                             children: [
-                              Text(
-                                'Assign one plan to each day',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleLarge
-                                    ?.copyWith(fontWeight: FontWeight.w800),
+                              Expanded(
+                                child: FilledButton(
+                                  onPressed: _activateSelectedProfile,
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: accentColor,
+                                    foregroundColor: Colors.black,
+                                  ),
+                                  child: const Text('Set Active Schedule'),
+                                ),
                               ),
-                              const SizedBox(height: 6),
-                              const Text(
-                                'Today\'s home card will automatically show the plan scheduled for that weekday.',
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) =>
+                                                const PrebuiltWorkoutPlansPage(),
+                                      ),
+                                    );
+                                  },
+                                  child: const Text('Pre-built Plans'),
+                                ),
                               ),
                             ],
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        OutlinedButton(
-                          onPressed: () async {
-                            await Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const PrebuiltWorkoutPlansPage(),
-                              ),
-                            );
-                            if (mounted) {
-                              await _load();
-                            }
-                          },
-                          child: const Text('Pre-built'),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  ..._weekdayLabels.entries.map((entry) {
-                    final scheduleEntry = _scheduleByDay[entry.key];
+                    const SizedBox(height: 16),
+                    ..._weekdayLabels.entries.map((entry) {
+                      final assignedPlanId = _dayToPlanId[entry.key];
+                      final assignedPlan = _selectedProfile?.days
+                          .where((day) => day.dayOfWeek == entry.key)
+                          .map((day) => day.plan)
+                          .firstOrNull;
 
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: cardColor,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: entry.key == today
-                                ? accentColor
-                                : accentColor.withValues(alpha: 0.16),
-                            width: entry.key == today ? 2 : 1,
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: cardColor,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color:
+                                  entry.key == today
+                                      ? accentColor
+                                      : accentColor.withValues(alpha: 0.16),
+                              width: entry.key == today ? 2 : 1,
+                            ),
                           ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  entry.value,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
-                                      ?.copyWith(fontWeight: FontWeight.w800),
-                                ),
-                                if (entry.key == today) ...[
-                                  const SizedBox(width: 10),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: accentColor.withValues(alpha: 0.18),
-                                      borderRadius: BorderRadius.circular(999),
-                                    ),
-                                    child: Text(
-                                      'Today',
-                                      style: TextStyle(
-                                        color: isDarkMode
-                                            ? accentColor
-                                            : Colors.black,
-                                        fontWeight: FontWeight.w700,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    entry.value,
+                                    style: Theme.of(context).textTheme.titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.w800),
+                                  ),
+                                  if (entry.key == today) ...[
+                                    const SizedBox(width: 10),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: accentColor.withValues(alpha: 0.18),
+                                        borderRadius: BorderRadius.circular(999),
+                                      ),
+                                      child: Text(
+                                        'Today',
+                                        style: TextStyle(
+                                          color: isDarkMode
+                                              ? accentColor
+                                              : Colors.black,
+                                          fontWeight: FontWeight.w700,
+                                        ),
                                       ),
                                     ),
-                                  ),
+                                  ],
                                 ],
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            DropdownButtonFormField<String?>(
-                              initialValue: scheduleEntry?.workoutPlanId,
-                              decoration: const InputDecoration(
-                                labelText: 'Assigned plan',
                               ),
-                              items: [
-                                const DropdownMenuItem<String?>(
-                                  value: null,
-                                  child: Text('No plan assigned'),
-                                ),
-                                ..._plans.map(
-                                  (plan) => DropdownMenuItem<String?>(
-                                    value: plan.id,
-                                    child: Text(
-                                      plan.name,
-                                      overflow: TextOverflow.ellipsis,
+                              const SizedBox(height: 12),
+                              if (_canEditSelectedProfile)
+                                DropdownButtonFormField<String?>(
+                                  initialValue: assignedPlanId,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Assigned plan',
+                                  ),
+                                  items: [
+                                    const DropdownMenuItem<String?>(
+                                      value: null,
+                                      child: Text('No plan assigned'),
                                     ),
+                                    ..._plans.map(
+                                      (plan) => DropdownMenuItem<String?>(
+                                        value: plan.id,
+                                        child: Text(
+                                          plan.name,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                  onChanged: (value) {
+                                    setState(() => _dayToPlanId[entry.key] = value);
+                                  },
+                                )
+                              else
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(16),
+                                    color: accentColor.withValues(alpha: 0.08),
+                                  ),
+                                  child: Text(
+                                    assignedPlan?.name ?? 'No plan assigned',
                                   ),
                                 ),
-                              ],
-                              onChanged: (value) => _setSchedule(entry.key, value),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
+                      );
+                    }),
+                    if (_canEditSelectedProfile)
+                      FilledButton.icon(
+                        onPressed: _saveSelfSchedule,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: accentColor,
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                        icon: const Icon(Icons.save_outlined),
+                        label: const Text('Save My Schedule'),
                       ),
-                    );
-                  }),
-                ],
+                  ],
+                ),
               ),
-            ),
     );
   }
+}
+
+extension<T> on Iterable<T> {
+  T? get firstOrNull => isEmpty ? null : first;
 }
