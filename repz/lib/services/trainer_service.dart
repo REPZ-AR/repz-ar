@@ -62,4 +62,12 @@ class TrainerService {
       'client_type': 'online',
     });
   }
+
+  Future<void> removeTrainer({required String trainerUserId}) async {
+    await _supabase
+        .from('trainer_client')
+        .delete()
+        .eq('trainer_id', trainerUserId)
+        .eq('client_id', _clientId);
+  }
 }
