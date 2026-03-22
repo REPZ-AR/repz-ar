@@ -15,4 +15,18 @@ class ExerciseRepository {
         .map((row) => Exercise.fromMap(row as Map<String, dynamic>))
         .toList();
   }
+
+  Future<List<Exercise>> fetchExercisesByIds(List<String> ids) async {
+    if (ids.isEmpty) return [];
+
+    final response = await _supabase
+        .from('exercises')
+        .select()
+        .inFilter('id', ids)
+        .eq('is_active', true);
+
+    return (response as List)
+        .map((row) => Exercise.fromMap(row as Map<String, dynamic>))
+        .toList();
+  }
 }
