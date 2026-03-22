@@ -10,7 +10,6 @@ class WorkoutCatalogExercise {
     required this.icon,
     required this.variations,
     this.workoutType,
-    // this.assetPath,
     this.targetJoints = const <String>[],
     this.defaultReps = 12,
     this.defaultSetCount = 3,
@@ -21,7 +20,6 @@ class WorkoutCatalogExercise {
   final IconData icon;
   final List<String> variations;
   final WorkoutType? workoutType;
-  // final String? assetPath;
   final List<String> targetJoints;
   final int defaultReps;
   final int defaultSetCount;
