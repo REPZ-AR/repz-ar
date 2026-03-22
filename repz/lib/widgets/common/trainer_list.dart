@@ -10,7 +10,7 @@ class TrainerList extends StatelessWidget {
   final Color cardColor;
   final VoidCallback onRefresh;
   final void Function(String id) onToggleExpand;
-  final void Function(Trainer trainer) onAddSchedule;
+  final void Function(Trainer trainer) onRemove;
 
   const TrainerList({
     Key? key,
@@ -21,7 +21,7 @@ class TrainerList extends StatelessWidget {
     required this.cardColor,
     required this.onRefresh,
     required this.onToggleExpand,
-    required this.onAddSchedule,
+    required this.onRemove,
   }) : super(key: key);
 
   @override
@@ -42,7 +42,7 @@ class TrainerList extends StatelessWidget {
             accentColor: accentColor,
             cardColor: cardColor,
             onTap: () => onToggleExpand(trainer.id),
-            onAddSchedule: () => onAddSchedule(trainer),
+            onRemove: () => onRemove(trainer),
           );
         },
       ),

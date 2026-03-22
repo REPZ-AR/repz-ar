@@ -38,3 +38,7 @@ create policy "Anyone can view trainer profiles"
 create policy "Clients can insert their own trainer relationships"
   on public.trainer_client for insert to authenticated
   with check (auth.uid() = client_id);
+
+create policy "Clients can delete their own trainer relationships"
+  on public.trainer_client for delete to authenticated
+  using (auth.uid() = client_id);
