@@ -116,3 +116,28 @@ jobs:
         with:
           commit_message: "test: refresh Linux goldens"
           file_pattern: repz/test/performance/goldens/*.png
+
+  build:
+    if: always()
+    runs-on: ubuntu-latest
+    needs:
+      - analyze
+      - test-core
+      - test-performance-smoke
+      - test-visual-goldens
+    steps:
+      - name: Enforce required checks
+        run: |
+          if [ "${{ needs.analyze.result }}" != "success" ]; then
+            echo "analyze failed"
+            exit 1
+          fi
+          if [ "${{ needs.test-core.result }}" != "success" ]; then
+            echo "test-core failed"
+            exit 1
+          fi
+          if [ "${{ needs.test-performance-smoke.result }}" != "success" ]; then
+            echo "test-performance-smoke failed"
+            exit 1
+          fi
+          echo "Required CI checks passed."
