@@ -81,7 +81,10 @@ class _MainPageState extends State<MainPage>
               workoutGateway: widget.workoutGateway,
             ),
       1: widget.isCoach
-          ? ClientManagementPage(isDarkMode: widget.isDarkMode)
+          ? ClientManagementPage(
+        isDarkMode: widget.isDarkMode,
+        onBack: () => setState(() => _selectedIndex = 0),
+      )
           : TrainerManagementPage(isDarkMode: widget.isDarkMode),
       3: FeedPage(isDarkMode: widget.isDarkMode),
       4: ProfilePage(
@@ -222,7 +225,7 @@ class _MainPageState extends State<MainPage>
   @override
   Widget build(BuildContext context) {
     final accentColor =
-        widget.isDarkMode ? const Color(0xFFCFF500) : const Color(0xFFA66CFF);
+    widget.isDarkMode ? const Color(0xFFCFF500) : const Color(0xFFA66CFF);
     final labelColor = widget.isDarkMode ? Colors.white70 : Colors.black87;
 
     return Stack(
@@ -240,8 +243,15 @@ class _MainPageState extends State<MainPage>
                 label: 'Home',
               ),
               BottomNavigationBarItem(
-                icon: const Icon(Icons.search_outlined),
-                activeIcon: Icon(Icons.search, color: accentColor),
+                icon: Icon(
+                  widget.isCoach
+                      ? Icons.group_outlined
+                      : Icons.fitness_center_outlined,
+                ),
+                activeIcon: Icon(
+                  widget.isCoach ? Icons.group : Icons.fitness_center,
+                  color: accentColor,
+                ),
                 label: widget.isCoach ? 'Clients' : 'Trainers',
               ),
               BottomNavigationBarItem(
@@ -249,14 +259,32 @@ class _MainPageState extends State<MainPage>
                 label: widget.isCoach ? 'Assign' : '',
               ),
               BottomNavigationBarItem(
-                icon: const Icon(Icons.folder_outlined),
-                activeIcon: Icon(Icons.folder, color: accentColor),
+                icon: const Icon(Icons.whatshot_outlined),
+                activeIcon: Icon(Icons.whatshot, color: accentColor),
                 label: 'Feed',
               ),
               BottomNavigationBarItem(
-                icon: const Icon(Icons.menu_outlined),
-                activeIcon: Icon(Icons.menu, color: accentColor),
-                label: 'Menu',
+                icon: CircleAvatar(
+                  radius: 14,
+                  backgroundColor: accentColor.withAlpha(40),
+                  backgroundImage: widget.avatarUrl != null
+                      ? NetworkImage(widget.avatarUrl!)
+                      : null,
+                  child: widget.avatarUrl == null
+                      ? Icon(Icons.person_outlined, size: 16, color: accentColor)
+                      : null,
+                ),
+                activeIcon: CircleAvatar(
+                  radius: 14,
+                  backgroundColor: accentColor.withAlpha(60),
+                  backgroundImage: widget.avatarUrl != null
+                      ? NetworkImage(widget.avatarUrl!)
+                      : null,
+                  child: widget.avatarUrl == null
+                      ? Icon(Icons.person, size: 16, color: accentColor)
+                      : null,
+                ),
+                label: 'Profile',
               ),
             ],
           ),
@@ -349,12 +377,12 @@ class _MainPageState extends State<MainPage>
           border: Border.all(color: accentColor, width: 4),
           boxShadow: isOpen
               ? [
-                  BoxShadow(
-                    color: accentColor.withValues(alpha: 0.28),
-                    blurRadius: 18,
-                    spreadRadius: 2,
-                  ),
-                ]
+            BoxShadow(
+              color: accentColor.withValues(alpha: 0.28),
+              blurRadius: 18,
+              spreadRadius: 2,
+            ),
+          ]
               : null,
         ),
         child: Container(

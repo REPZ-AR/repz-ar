@@ -9,9 +9,8 @@ class ClientService {
   Future<List<Client>> fetchClients() async {
     final result = await _supabase
         .from('trainer_client')
-        .select('client_id, client_type, status')
-        .eq('trainer_id', _trainerId)
-        .eq('status', 'active');
+        .select('client_id, client_type, status, created_at')
+        .eq('trainer_id', _trainerId);
 
     if (result.isEmpty) return [];
 
@@ -20,6 +19,10 @@ class ClientService {
       name: 'Client ${(row['client_id'] as String).substring(0, 6)}',
       subtitle: row['client_type'] == 'online' ? 'Online' : 'Gym',
       avatarUrl: null,
+      status: row['status'] ?? 'active',
+      joinedDate: row['created_at'] != null
+          ? DateTime.tryParse(row['created_at'] as String)
+          : null,
     )).toList();
   }
 
