@@ -130,4 +130,60 @@ class WorkoutAnalyzer {
     // Default Good State
     return WorkoutFeedback("Good form!", {});
   }
+
+  static WorkoutFeedback _analyzeSquats(
+      Map<String, Point3D> livePose,
+      Map<String, Point3D> baselinePose,
+      ) {
+    final liveHip = livePose['leftHip'];
+    final liveKnee = livePose['leftKnee'];
+    final liveAnkle = livePose['leftAnkle'];
+    final liveShoulder = livePose['leftShoulder'];
+
+    final baseHip = baselinePose['leftHip'];
+    final baseKnee = baselinePose['leftKnee'];
+    final baseAnkle = baselinePose['leftAnkle'];
+    final baseShoulder = baselinePose['leftShoulder'];
+
+    if (liveHip == null || liveKnee == null || liveAnkle == null ||
+        baseHip == null || baseKnee == null || baseAnkle == null) {
+      return WorkoutFeedback("Tracking lost", {});
+    }
+
+    double liveKneeAngle = getAngle(liveHip, liveKnee, liveAnkle);
+    double baseKneeAngle = getAngle(baseHip, baseKnee, baseAnkle);
+
+    double kneeDiff = (liveKneeAngle - baseKneeAngle).abs();
+
+    if (kneeDiff > 20) {
+      return WorkoutFeedback(
+        "Adjust your squat depth",
+        {
+          PoseLandmarkType.leftHip,
+          PoseLandmarkType.leftKnee,
+          PoseLandmarkType.leftAnkle,
+        },
+      );
+    }
+
+    if (liveShoulder != null && baseShoulder != null) {
+      double liveHipAngle = getAngle(liveShoulder, liveHip, liveKnee);
+      double baseHipAngle = getAngle(baseShoulder, baseHip, baseKnee);
+
+      double torsoDiff = (liveHipAngle - baseHipAngle).abs();
+
+      if (torsoDiff > 20) {
+        return WorkoutFeedback(
+          "Keep your chest up",
+          {
+            PoseLandmarkType.leftShoulder,
+            PoseLandmarkType.leftHip,
+            PoseLandmarkType.leftKnee,
+          },
+        );
+      }
+    }
+
+    return WorkoutFeedback("Good form!", {});
+  }
 }
