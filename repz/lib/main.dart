@@ -210,6 +210,7 @@ class _AuthGateState extends State<AuthGate> {
   bool _profileLoading = false;
   Profile? _profile;
   String? _profileError;
+  String? _profileRequestedUserId;
 
   late final AuthGateway _authGateway =
       widget.authGateway ?? AuthRepositoryGateway();
@@ -266,6 +267,7 @@ class _AuthGateState extends State<AuthGate> {
     setState(() {
       _profileLoading = true;
       _profileError = null;
+      _profileRequestedUserId = user.id;
     });
 
     try {
@@ -380,7 +382,10 @@ class _AuthGateState extends State<AuthGate> {
         }
 
         final user = session.user;
-        if (_profile?.userId != user.id && !_profileLoading) {
+        final needsCurrentUserProfile = _profile?.userId != user.id;
+        final awaitingProfileRequest = _profileRequestedUserId != user.id;
+
+        if (needsCurrentUserProfile && !_profileLoading) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) {
               _loadProfileFlag(user);
@@ -388,13 +393,14 @@ class _AuthGateState extends State<AuthGate> {
           });
         }
 
-        if (_profileLoading && _profile?.userId != user.id) {
+        if (needsCurrentUserProfile &&
+            (_profileLoading || awaitingProfileRequest)) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
 
-        if (_profileError != null && _profile?.userId != user.id) {
+        if (_profileError != null && needsCurrentUserProfile) {
           return Scaffold(
             body: Center(
               child: Padding(
