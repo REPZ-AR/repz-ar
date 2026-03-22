@@ -3,7 +3,7 @@ import 'package:repz/model/workout_plan.dart';
 import 'package:repz/views/client_management.dart';
 import 'package:repz/views/feed_page.dart';
 import 'package:repz/views/home_page.dart';
-import 'package:repz/views/menu_page.dart';
+import 'package:repz/views/profile_page.dart';
 import 'package:repz/views/trainer_home_page.dart';
 import 'package:repz/views/trainer_plan_library_page.dart';
 import 'package:repz/views/trainer_management.dart';
@@ -84,7 +84,7 @@ class _MainPageState extends State<MainPage>
           ? ClientManagementPage(isDarkMode: widget.isDarkMode)
           : TrainerManagementPage(isDarkMode: widget.isDarkMode),
       3: FeedPage(isDarkMode: widget.isDarkMode),
-      4: MenuPage(
+      4: ProfilePage(
           isDarkMode: widget.isDarkMode,
           isCoach: widget.isCoach,
           avatarUrl: widget.avatarUrl,
