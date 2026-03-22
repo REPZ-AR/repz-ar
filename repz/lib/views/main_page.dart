@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:repz/views/client_management.dart';
 import 'package:repz/views/feed_page.dart';
 import 'package:repz/views/home_page.dart';
-import 'package:repz/views/menu_page.dart';
+import 'package:repz/views/profile_page.dart';
 import 'package:repz/views/trainer_management.dart';
 import 'package:repz/views/workout_builder_page.dart';
 import 'package:repz/views/workout_plan_helpers.dart';
@@ -71,7 +71,7 @@ class _MainPageState extends State<MainPage>
           ? ClientManagementPage(isDarkMode: widget.isDarkMode)
           : TrainerManagementPage(isDarkMode: widget.isDarkMode),
       3: FeedPage(isDarkMode: widget.isDarkMode),
-      4: MenuPage(
+      4: ProfilePage(
           isDarkMode: widget.isDarkMode,
           avatarUrl: widget.avatarUrl,
           userName: widget.userName,
