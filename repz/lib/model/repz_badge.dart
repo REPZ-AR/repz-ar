@@ -20,4 +20,20 @@ class RepzBadge {
     required this.borderColor,
     required this.iconColor,
   });
+
+  factory RepzBadge.fromMap(Map<String, dynamic> map) {
+    return RepzBadge(
+      month: map['month'] as String,
+      label: map['label'] as String,
+      description: map['description'] as String,
+      earned: map['earned'] as bool,
+      icon: IconData(
+        map['icon_code_point'] as int,
+        fontFamily: 'MaterialIcons',
+      ),
+      bgColor: Color(map['bg_color'] as int),
+      borderColor: Color(map['border_color'] as int),
+      iconColor: Color(map['icon_color'] as int),
+    );
+  }
 }

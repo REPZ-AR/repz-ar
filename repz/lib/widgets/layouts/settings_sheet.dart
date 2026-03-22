@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../services/friend_service.dart';
+import '../../views/friend_requests.dart';
 
-class SettingsSheet extends StatelessWidget {
+class SettingsSheet extends StatefulWidget {
   final bool isDarkMode;
   final Function(bool) onThemeChanged;
   final VoidCallback? onLogout;
@@ -33,10 +35,31 @@ class SettingsSheet extends StatelessWidget {
   }
 
   @override
+  State<SettingsSheet> createState() => _SettingsSheetState();
+}
+
+class _SettingsSheetState extends State<SettingsSheet> {
+  final _friendService = FriendService();
+  int _pendingCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPendingCount();
+  }
+
+  Future<void> _loadPendingCount() async {
+    try {
+      final count = await _friendService.fetchPendingRequestCount();
+      if (mounted) setState(() => _pendingCount = count);
+    } catch (_) {}
+  }
+
+  @override
   Widget build(BuildContext context) {
     final accentColor =
-    isDarkMode ? const Color(0xFFCFF500) : const Color(0xFFA66CFF);
-    final primaryTextColor = isDarkMode ? Colors.white : Colors.black;
+    widget.isDarkMode ? const Color(0xFFCFF500) : const Color(0xFFA66CFF);
+    final primaryTextColor = widget.isDarkMode ? Colors.white : Colors.black;
     final dividerColor = primaryTextColor.withValues(alpha: 0.08);
 
     return StatefulBuilder(
@@ -56,6 +79,69 @@ class SettingsSheet extends StatelessWidget {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
+
+              // Friend requests row
+              InkWell(
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => FriendRequestsPage(
+                      isDarkMode: widget.isDarkMode,
+                    ),
+                  ));
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.person_add_outlined,
+                        color: primaryTextColor.withValues(alpha: 0.6),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Friend Requests',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: primaryTextColor,
+                          ),
+                        ),
+                      ),
+                      if (_pendingCount > 0)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: accentColor,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '$_pendingCount',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: widget.isDarkMode
+                                  ? Colors.black
+                                  : Colors.white,
+                            ),
+                          ),
+                        ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        color: primaryTextColor.withValues(alpha: 0.3),
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              Divider(color: dividerColor),
 
               // Dark mode row
               Row(
@@ -80,9 +166,9 @@ class SettingsSheet extends StatelessWidget {
                     ],
                   ),
                   Switch(
-                    value: isDarkMode,
+                    value: widget.isDarkMode,
                     onChanged: (val) {
-                      onThemeChanged(val);
+                      widget.onThemeChanged(val);
                       setSheetState(() {});
                     },
                     activeThumbColor: accentColor,
@@ -90,17 +176,15 @@ class SettingsSheet extends StatelessWidget {
                 ],
               ),
 
-              const SizedBox(height: 8),
               Divider(color: dividerColor),
-              const SizedBox(height: 8),
 
               // Logout row
               InkWell(
-                onTap: onLogout == null
+                onTap: widget.onLogout == null
                     ? null
                     : () {
                   Navigator.of(ctx).pop();
-                  onLogout!();
+                  widget.onLogout!();
                 },
                 borderRadius: BorderRadius.circular(12),
                 child: Padding(
