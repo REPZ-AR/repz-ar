@@ -56,8 +56,7 @@ class WorkoutAnalyzer {
       case WorkoutType.curls:
         return _analyzeCurls(livePose, baselinePose);
       case WorkoutType.squats:
-      // Future implementation for squats
-        return WorkoutFeedback("Good form!", {});
+        return _analyzeSquats(livePose, baselinePose);
       case WorkoutType.planks:
         return _analyzePlanks(livePose, baselinePose);
       default:
