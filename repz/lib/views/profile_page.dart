@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../model/repz_badge.dart';
+import '../model/friend.dart';
+import '../services/friend_service.dart';
 import '../widgets/layouts/friends_card.dart';
 import '../widgets/layouts/menu_card.dart';
 import '../widgets/layouts/profile_card.dart';
@@ -33,29 +35,10 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  final List<Map<String, String>> _friends = [
-    {'name': 'Anika', 'initials': 'AK'},
-    {'name': 'Roshan', 'initials': 'RS'},
-    {'name': 'Tanya', 'initials': 'TM'},
-    {'name': 'Kavi', 'initials': 'KP'},
-    {'name': 'Dev', 'initials': 'DV'},
-  ];
+  final _friendService = FriendService();
 
-  final List<Color> _avatarColors = const [
-    Color(0xFFEEEDFE),
-    Color(0xFFE1F5EE),
-    Color(0xFFFAECE7),
-    Color(0xFFFAEEDA),
-    Color(0xFFFBEAF0),
-  ];
-
-  final List<Color> _avatarTextColors = const [
-    Color(0xFF3C3489),
-    Color(0xFF085041),
-    Color(0xFF712B13),
-    Color(0xFF633806),
-    Color(0xFF72243E),
-  ];
+  List<Friend> _friends = [];
+  bool _friendsLoading = true;
 
   List<RepzBadge> _badges = [];
   bool _badgesLoading = true;
@@ -63,7 +46,22 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
+    _fetchFriends();
     _fetchBadges();
+  }
+
+  Future<void> _fetchFriends() async {
+    try {
+      final friends = await _friendService.fetchFriends();
+      if (mounted) {
+        setState(() {
+          _friends = friends;
+          _friendsLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _friendsLoading = false);
+    }
   }
 
   Future<void> _fetchBadges() async {
@@ -148,8 +146,7 @@ class _ProfilePageState extends State<ProfilePage> {
             FriendsCard(
               isDarkMode: widget.isDarkMode,
               friends: _friends,
-              avatarColors: _avatarColors,
-              avatarTextColors: _avatarTextColors,
+              isLoading: _friendsLoading,
               onAddFriend: () {
                 // TODO: navigate to AddFriendPage
               },
