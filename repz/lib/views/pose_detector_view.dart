@@ -1,9 +1,6 @@
-import 'dart:convert';
-
 import 'package:camera/camera.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 import 'package:repz/model/coordinate_point.dart';
 import 'package:repz/views/utils/logger.dart';
@@ -46,17 +43,11 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
   CustomPaint? _customPaint;
   String? _text;
   var _cameraLensDirection = CameraLensDirection.front;
-  PoseLogger _logger = PoseLogger();
+  final PoseLogger _logger = PoseLogger();
   List<Map<String, Point3D>> _normalizedBaseline = [];
   bool _isBaselineLoaded = false;
   DateTime _lastFeedbackTime = DateTime.now();
   Set<PoseLandmarkType> _currentBadJoints = {};
-
-  final List<String> _activeWorkoutJoints = [
-    'leftShoulder',
-    'leftElbow',
-    'leftWrist',
-  ];
 
   @override
   void initState() {
@@ -69,22 +60,26 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
     setState(() {
       _isBaselineLoaded = false;
       _currentExercise = widget.exercises[index];
+      _normalizedBaseline = [];
+      _currentBadJoints = {};
+      _lastMatchedIndex = -1;
     });
-    _loadAndNormalizeBaseline(_currentExercise.assetPath);
+
+    _loadAndNormalizeBaselineFromData(_currentExercise.baselineData);
   }
 
-  Future<void> _loadAndNormalizeBaseline(String path) async {
+  Future<void> _loadAndNormalizeBaselineFromData(List<dynamic> data) async {
     try {
-      final String response = await rootBundle.loadString(path);
-      final List<dynamic> data = json.decode(response);
+      final List<Map<String, Point3D>> tempNormalized = [];
 
-      List<Map<String, Point3D>> tempNormalized = [];
+      for (final frameData in data) {
+        if (frameData is! Map<String, dynamic>) continue;
 
-      for (var frameData in data) {
-        // Assuming your JSON has a 'landmarks' key that maps to the utils.dart structure
-        final landmarksMap = frameData['landmarks'] as Map<String, dynamic>;
+        final dynamic landmarksDynamic = frameData['landmarks'];
+        if (landmarksDynamic is! Map<String, dynamic>) continue;
+
         final normalizedFrame = PoseMatcher.normalizeBaselineFrame(
-          landmarksMap,
+          landmarksDynamic,
         );
 
         if (normalizedFrame != null) {
@@ -92,15 +87,23 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
         }
       }
 
+      if (!mounted) return;
+
       setState(() {
         _normalizedBaseline = tempNormalized;
         _isBaselineLoaded = true;
       });
-      print(
-        "Baseline loaded and normalized: ${_normalizedBaseline.length} frames.",
+
+      debugPrint(
+        'Baseline loaded and normalized: ${_normalizedBaseline.length} frames.',
       );
     } catch (e) {
-      print("Error loading baseline: $e");
+      debugPrint('Error loading baseline from DB data: $e');
+      if (!mounted) return;
+      setState(() {
+        _normalizedBaseline = [];
+        _isBaselineLoaded = false;
+      });
     }
   }
 
@@ -113,7 +116,10 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
 
   @override
   Widget build(BuildContext context) {
-    final accentColor = widget.isDarkMode ? const Color(0xFFCFF500) : const Color(0xFFA66CFF);
+    final accentColor = widget.isDarkMode
+        ? const Color(0xFFCFF500)
+        : const Color(0xFFA66CFF);
+
     return DetectorView(
       title: 'Pose Detector',
       customPaint: _customPaint,
@@ -167,14 +173,15 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
   }
 
   Future<void> _processImage(InputImage inputImage) async {
-    if (!_canProcess) return;
-    if (_isBusy) return;
+    if (!_canProcess || _isBusy) return;
+
     _isBusy = true;
     setState(() {
       _text = '';
     });
     final poses = await _poseDetector.processImage(inputImage);
-    if (poses.isNotEmpty && _isBaselineLoaded) {
+
+    if (poses.isNotEmpty && _isBaselineLoaded && _normalizedBaseline.isNotEmpty) {
       final currentPose = poses.first;
 
       // 1. Normalize the live frame
@@ -185,18 +192,16 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
         final closestIndex = PoseMatcher.findClosestFrameIndex(
           normalizedLive,
           _normalizedBaseline,
-          _activeWorkoutJoints,
-            _lastMatchedIndex
+          _currentExercise.targetJoints,
+          _lastMatchedIndex,
         );
 
         if (closestIndex != -1) {
           _lastMatchedIndex = closestIndex;
-          _text =
-              'Matched Baseline Frame: $closestIndex / ${_normalizedBaseline.length}\n';
 
           final matchedBaselineFrame = _normalizedBaseline[closestIndex];
 
-          WorkoutFeedback feedback = WorkoutAnalyzer.analyze(
+          final WorkoutFeedback feedback = WorkoutAnalyzer.analyze(
             _currentExercise.type,
             normalizedLive,
             matchedBaselineFrame,
@@ -206,7 +211,7 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
           final now = DateTime.now();
           if (now.difference(_lastFeedbackTime).inMilliseconds > 400) {
             _text =
-                'Match: $closestIndex / ${_normalizedBaseline.length}\nFeedback: ${feedback.message}';
+            'Match: $closestIndex / ${_normalizedBaseline.length}\nFeedback: ${feedback.message}';
             _currentBadJoints = feedback.badJoints;
             _lastFeedbackTime = now;
           }
@@ -226,7 +231,6 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
       _customPaint = CustomPaint(painter: painter);
     } else {
       _text = 'Poses found: ${poses.length}\n\n';
-      // TODO: set _customPaint to draw landmarks on top of image
       _customPaint = null;
     }
     _isBusy = false;
@@ -245,7 +249,7 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
       widget.onProgressSaved?.call(_currentIndex);
     } else {
       setState(() {
-        _currentIndex = 0; // Reset index to the start for next time
+        _currentIndex = 0;
       });
       widget.onProgressSaved?.call(_currentIndex);
       Navigator.pop(context);

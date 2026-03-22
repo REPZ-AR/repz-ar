@@ -43,14 +43,7 @@ class WideProceedButton extends StatelessWidget {
       height: height,
       decoration: BoxDecoration(
         color: effectiveBackgroundColor,
-        borderRadius: BorderRadius.circular(999),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadowSoft.withValues(alpha: enabled ? 1.0 : 0.5),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(999)
       ),
       child: Material(
         color: Colors.transparent,
