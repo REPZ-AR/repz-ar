@@ -1,5 +1,38 @@
 import 'workout.dart';
 
+enum WorkoutPlanScope {
+  personal('personal'),
+  trainerTemplate('trainer_template'),
+  assignedCopy('assigned_copy');
+
+  const WorkoutPlanScope(this.dbValue);
+
+  final String dbValue;
+
+  static WorkoutPlanScope fromDbValue(String? value) {
+    for (final scope in WorkoutPlanScope.values) {
+      if (scope.dbValue == value) return scope;
+    }
+    return WorkoutPlanScope.personal;
+  }
+}
+
+enum ScheduleProfileSourceType {
+  self('self'),
+  trainerProposed('trainer_proposed');
+
+  const ScheduleProfileSourceType(this.dbValue);
+
+  final String dbValue;
+
+  static ScheduleProfileSourceType fromDbValue(String? value) {
+    for (final type in ScheduleProfileSourceType.values) {
+      if (type.dbValue == value) return type;
+    }
+    return ScheduleProfileSourceType.self;
+  }
+}
+
 class WorkoutPlanSet {
   const WorkoutPlanSet({
     this.id,
@@ -137,6 +170,11 @@ class WorkoutPlan {
     required this.isActive,
     required this.createdAt,
     required this.updatedAt,
+    this.planScope = WorkoutPlanScope.personal,
+    this.trainerId,
+    this.assignedClientId,
+    this.sourceWorkoutPlanId,
+    this.isReadOnly = false,
     required this.exercises,
   });
 
@@ -147,6 +185,11 @@ class WorkoutPlan {
   final bool isActive;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final WorkoutPlanScope planScope;
+  final String? trainerId;
+  final String? assignedClientId;
+  final String? sourceWorkoutPlanId;
+  final bool isReadOnly;
   final List<WorkoutPlanExercise> exercises;
 
   WorkoutPlan copyWith({
@@ -157,6 +200,11 @@ class WorkoutPlan {
     bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
+    WorkoutPlanScope? planScope,
+    String? trainerId,
+    String? assignedClientId,
+    String? sourceWorkoutPlanId,
+    bool? isReadOnly,
     List<WorkoutPlanExercise>? exercises,
   }) {
     return WorkoutPlan(
@@ -167,6 +215,11 @@ class WorkoutPlan {
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      planScope: planScope ?? this.planScope,
+      trainerId: trainerId ?? this.trainerId,
+      assignedClientId: assignedClientId ?? this.assignedClientId,
+      sourceWorkoutPlanId: sourceWorkoutPlanId ?? this.sourceWorkoutPlanId,
+      isReadOnly: isReadOnly ?? this.isReadOnly,
       exercises: exercises ?? this.exercises,
     );
   }
@@ -190,9 +243,162 @@ class WorkoutPlan {
       isActive: map['is_active'] as bool? ?? false,
       createdAt: DateTime.parse(map['created_at'] as String),
       updatedAt: DateTime.parse(map['updated_at'] as String),
+      planScope: WorkoutPlanScope.fromDbValue(map['plan_scope'] as String?),
+      trainerId: map['trainer_id'] as String?,
+      assignedClientId: map['assigned_client_id'] as String?,
+      sourceWorkoutPlanId: map['source_workout_plan_id'] as String?,
+      isReadOnly: map['is_read_only'] as bool? ?? false,
       exercises: rawExercises.map(WorkoutPlanExercise.fromMap).toList(),
     );
   }
+}
+
+class WorkoutScheduleProfile {
+  const WorkoutScheduleProfile({
+    required this.id,
+    required this.userId,
+    required this.name,
+    required this.sourceType,
+    this.trainerId,
+    this.assignmentId,
+    required this.isActive,
+    required this.isReadOnly,
+    required this.createdAt,
+    required this.updatedAt,
+    required this.days,
+  });
+
+  final String id;
+  final String userId;
+  final String name;
+  final ScheduleProfileSourceType sourceType;
+  final String? trainerId;
+  final String? assignmentId;
+  final bool isActive;
+  final bool isReadOnly;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final List<WorkoutScheduleProfileDay> days;
+
+  factory WorkoutScheduleProfile.fromMap(Map<String, dynamic> map) {
+    final rawDays =
+        (map['workout_schedule_profile_days'] as List<dynamic>? ??
+                const <dynamic>[])
+            .cast<Map<String, dynamic>>();
+
+    rawDays.sort(
+      (a, b) => (a['day_of_week'] as int? ?? 0).compareTo(
+        b['day_of_week'] as int? ?? 0,
+      ),
+    );
+
+    return WorkoutScheduleProfile(
+      id: map['id'] as String,
+      userId: map['user_id'] as String,
+      name: (map['name'] as String?) ?? 'Schedule',
+      sourceType: ScheduleProfileSourceType.fromDbValue(
+        map['source_type'] as String?,
+      ),
+      trainerId: map['trainer_id'] as String?,
+      assignmentId: map['assignment_id'] as String?,
+      isActive: map['is_active'] as bool? ?? false,
+      isReadOnly: map['is_read_only'] as bool? ?? false,
+      createdAt: DateTime.parse(map['created_at'] as String),
+      updatedAt: DateTime.parse(map['updated_at'] as String),
+      days: rawDays.map(WorkoutScheduleProfileDay.fromMap).toList(),
+    );
+  }
+}
+
+class WorkoutScheduleProfileDay {
+  const WorkoutScheduleProfileDay({
+    required this.id,
+    required this.scheduleProfileId,
+    required this.dayOfWeek,
+    required this.workoutPlanId,
+    this.plan,
+  });
+
+  final String id;
+  final String scheduleProfileId;
+  final int dayOfWeek;
+  final String workoutPlanId;
+  final WorkoutPlan? plan;
+
+  factory WorkoutScheduleProfileDay.fromMap(Map<String, dynamic> map) {
+    final nestedPlan = map['workout_plans'] as Map<String, dynamic>?;
+
+    return WorkoutScheduleProfileDay(
+      id: map['id'] as String,
+      scheduleProfileId: map['schedule_profile_id'] as String,
+      dayOfWeek: map['day_of_week'] as int,
+      workoutPlanId: map['workout_plan_id'] as String,
+      plan: nestedPlan == null ? null : WorkoutPlan.fromMap(nestedPlan),
+    );
+  }
+}
+
+class WorkoutPlanAssignment {
+  const WorkoutPlanAssignment({
+    required this.id,
+    required this.trainerId,
+    required this.clientId,
+    required this.trainerWorkoutPlanId,
+    required this.clientWorkoutPlanId,
+    required this.status,
+    required this.createdAt,
+    required this.updatedAt,
+    this.trainerPlan,
+    this.clientPlan,
+  });
+
+  final String id;
+  final String trainerId;
+  final String clientId;
+  final String trainerWorkoutPlanId;
+  final String clientWorkoutPlanId;
+  final String status;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final WorkoutPlan? trainerPlan;
+  final WorkoutPlan? clientPlan;
+
+  factory WorkoutPlanAssignment.fromMap(Map<String, dynamic> map) {
+    final trainerPlanMap =
+        map['trainer_workout_plan'] as Map<String, dynamic>?;
+    final clientPlanMap = map['client_workout_plan'] as Map<String, dynamic>?;
+
+    return WorkoutPlanAssignment(
+      id: map['id'] as String,
+      trainerId: map['trainer_id'] as String,
+      clientId: map['client_id'] as String,
+      trainerWorkoutPlanId: map['trainer_workout_plan_id'] as String,
+      clientWorkoutPlanId: map['client_workout_plan_id'] as String,
+      status: (map['status'] as String?) ?? 'active',
+      createdAt: DateTime.parse(map['created_at'] as String),
+      updatedAt: DateTime.parse(map['updated_at'] as String),
+      trainerPlan:
+          trainerPlanMap == null ? null : WorkoutPlan.fromMap(trainerPlanMap),
+      clientPlan:
+          clientPlanMap == null ? null : WorkoutPlan.fromMap(clientPlanMap),
+    );
+  }
+}
+
+class ClientActivePlanStatus {
+  const ClientActivePlanStatus({
+    required this.clientId,
+    this.activeScheduleProfile,
+    this.todaysPlan,
+    this.currentWorkoutIndex = 0,
+    this.activeSourceLabel,
+  });
+
+  final String clientId;
+  final WorkoutScheduleProfile? activeScheduleProfile;
+  final WorkoutPlan? todaysPlan;
+  final int currentWorkoutIndex;
+  final String? activeSourceLabel;
 }
 
 class WorkoutPlanScheduleEntry {

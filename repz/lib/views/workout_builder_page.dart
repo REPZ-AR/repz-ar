@@ -6,9 +6,14 @@ import 'package:repz/views/workout_plan_helpers.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class WorkoutBuilderPage extends StatefulWidget {
-  const WorkoutBuilderPage({super.key, this.initialPlan});
+  const WorkoutBuilderPage({
+    super.key,
+    this.initialPlan,
+    this.planScope = WorkoutPlanScope.personal,
+  });
 
   final WorkoutPlan? initialPlan;
+  final WorkoutPlanScope planScope;
 
   @override
   State<WorkoutBuilderPage> createState() => _WorkoutBuilderPageState();
@@ -24,6 +29,8 @@ class _WorkoutBuilderPageState extends State<WorkoutBuilderPage> {
   late List<WorkoutPlanExercise> _exercises;
 
   bool get _isEditing => widget.initialPlan != null;
+  bool get _isTrainerTemplate =>
+      widget.planScope == WorkoutPlanScope.trainerTemplate;
 
   @override
   void initState() {
@@ -168,6 +175,11 @@ class _WorkoutBuilderPageState extends State<WorkoutBuilderPage> {
       isActive: isActive,
       createdAt: widget.initialPlan?.createdAt ?? now,
       updatedAt: now,
+      planScope: widget.planScope,
+      trainerId: _isTrainerTemplate ? user.id : null,
+      assignedClientId: widget.initialPlan?.assignedClientId,
+      sourceWorkoutPlanId: widget.initialPlan?.sourceWorkoutPlanId,
+      isReadOnly: widget.initialPlan?.isReadOnly ?? false,
       exercises: List<WorkoutPlanExercise>.generate(
         _exercises.length,
         (exerciseIndex) => _exercises[exerciseIndex].copyWith(
@@ -192,20 +204,25 @@ class _WorkoutBuilderPageState extends State<WorkoutBuilderPage> {
 
     setState(() => _isSaving = true);
     try {
+      final shouldStartAfterSave = startAfterSave && !_isTrainerTemplate;
       final savedPlan = await _repository.savePlan(
-        _buildPlan(startAfterSave),
-        setActive: startAfterSave,
+        _buildPlan(shouldStartAfterSave),
+        setActive: shouldStartAfterSave,
       );
 
       if (!mounted) return;
 
-      if (startAfterSave) {
+      if (shouldStartAfterSave) {
         final started = await WorkoutPlanHelpers.startPlan(context, savedPlan);
         if (!started) {
           return;
         }
       } else {
-        _showMessage(_isEditing ? 'Plan updated.' : 'Plan saved.');
+        _showMessage(
+          _isTrainerTemplate
+              ? (_isEditing ? 'Client plan updated.' : 'Client plan saved.')
+              : (_isEditing ? 'Plan updated.' : 'Plan saved.'),
+        );
       }
 
       if (mounted) {
@@ -245,7 +262,9 @@ class _WorkoutBuilderPageState extends State<WorkoutBuilderPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Build Your Workout',
+                _isTrainerTemplate
+                    ? 'Build Client Plan'
+                    : 'Build Your Workout',
                 style: Theme.of(context).textTheme.displaySmall?.copyWith(
                   fontWeight: FontWeight.w900,
                 ),
@@ -334,13 +353,19 @@ class _WorkoutBuilderPageState extends State<WorkoutBuilderPage> {
                   children: [
                     Expanded(
                       child: TextButton(
-                        onPressed: _isSaving ? null : () => _save(startAfterSave: true),
+                        onPressed: _isSaving
+                            ? null
+                            : () => _save(startAfterSave: !_isTrainerTemplate),
                         style: TextButton.styleFrom(
                           foregroundColor: primaryCtaTextColor,
                           padding: const EdgeInsets.symmetric(vertical: 22),
                         ),
                         child: Text(
-                          'Start Workout',
+                          _isTrainerTemplate
+                              ? (_isEditing
+                                  ? 'Update Client Plan'
+                                  : 'Save Client Plan')
+                              : 'Start Workout',
                           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.w900,
                             color: primaryCtaTextColor,
@@ -359,30 +384,37 @@ class _WorkoutBuilderPageState extends State<WorkoutBuilderPage> {
                         shape: BoxShape.circle,
                       ),
                       child: IconButton(
-                        onPressed: _isSaving ? null : () => _save(startAfterSave: true),
+                        onPressed: _isSaving
+                            ? null
+                            : () => _save(startAfterSave: !_isTrainerTemplate),
                         color: Colors.white,
                         iconSize: 34,
-                        icon: const Icon(Icons.play_arrow_rounded),
+                        icon: Icon(
+                          _isTrainerTemplate
+                              ? Icons.save_outlined
+                              : Icons.play_arrow_rounded,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: _isSaving ? null : () => _save(startAfterSave: false),
-                  icon: _isSaving
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.save_outlined),
-                  label: Text(_isEditing ? 'Update Plan' : 'Save Plan'),
+              if (!_isTrainerTemplate)
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _isSaving ? null : () => _save(startAfterSave: false),
+                    icon: _isSaving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.save_outlined),
+                    label: Text(_isEditing ? 'Update Plan' : 'Save Plan'),
+                  ),
                 ),
-              ),
               const SizedBox(height: 18),
               Align(
                 alignment: Alignment.centerLeft,
