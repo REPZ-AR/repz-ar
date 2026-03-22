@@ -1,23 +1,32 @@
 import 'package:flutter/material.dart';
+import '../../model/friend.dart';
 import 'friend_bubble.dart';
 
 class FriendsCard extends StatelessWidget {
   final bool isDarkMode;
-  final List<Map<String, String>> friends;
-  final List<Color> avatarColors;
-  final List<Color> avatarTextColors;
+  final List<Friend> friends;
+  final bool isLoading;
   final VoidCallback onAddFriend;
-  final void Function(Map<String, String> friend) onFriendTap;
+  final void Function(Friend friend) onFriendTap;
 
   const FriendsCard({
     super.key,
     required this.isDarkMode,
     required this.friends,
-    required this.avatarColors,
-    required this.avatarTextColors,
+    required this.isLoading,
     required this.onAddFriend,
     required this.onFriendTap,
   });
+
+  // Same rotating colors as before
+  static const _avatarColors = [
+    Color(0xFFEEEDFE), Color(0xFFE1F5EE),
+    Color(0xFFFAECE7), Color(0xFFFAEEDA), Color(0xFFFBEAF0),
+  ];
+  static const _avatarTextColors = [
+    Color(0xFF3C3489), Color(0xFF085041),
+    Color(0xFF712B13), Color(0xFF633806), Color(0xFF72243E),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -27,6 +36,9 @@ class FriendsCard extends StatelessWidget {
     final primaryTextColor = isDarkMode ? Colors.white : Colors.black;
     final secondaryTextColor = primaryTextColor.withValues(alpha: 0.55);
     final dividerColor = primaryTextColor.withValues(alpha: 0.08);
+    final shimmerColor = isDarkMode
+        ? Colors.white.withValues(alpha: 0.06)
+        : Colors.black.withValues(alpha: 0.06);
 
     return Container(
       decoration: BoxDecoration(
@@ -49,10 +61,37 @@ class FriendsCard extends StatelessWidget {
             ),
           ),
 
-          // Horizontal scrolling avatars
           SizedBox(
             height: 86,
-            child: ListView.separated(
+            child: isLoading
+                ? ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: 4,
+              separatorBuilder: (_, __) => const SizedBox(width: 14),
+              itemBuilder: (_, __) => Column(
+                children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: shimmerColor,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    width: 36,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: shimmerColor,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ],
+              ),
+            )
+                : ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: friends.length + 1,
@@ -65,12 +104,13 @@ class FriendsCard extends StatelessWidget {
                   );
                 }
                 final friend = friends[index];
-                final colorIndex = index % avatarColors.length;
+                final colorIndex = index % _avatarColors.length;
                 return FriendBubble(
-                  initials: friend['initials']!,
-                  name: friend['name']!,
-                  bgColor: avatarColors[colorIndex],
-                  textColor: avatarTextColors[colorIndex],
+                  initials: friend.initials,
+                  name: friend.name,
+                  avatarUrl: friend.avatarUrl,
+                  bgColor: _avatarColors[colorIndex],
+                  textColor: _avatarTextColors[colorIndex],
                   onTap: () => onFriendTap(friend),
                 );
               },
@@ -80,7 +120,6 @@ class FriendsCard extends StatelessWidget {
           const SizedBox(height: 4),
           Divider(height: 1, color: dividerColor),
 
-          // Add friend wide button
           InkWell(
             onTap: onAddFriend,
             borderRadius: const BorderRadius.only(
@@ -88,11 +127,13 @@ class FriendsCard extends StatelessWidget {
               bottomRight: Radius.circular(16),
             ),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.person_add_outlined, size: 18, color: accentColor),
+                  Icon(Icons.person_add_outlined,
+                      size: 18, color: accentColor),
                   const SizedBox(width: 8),
                   Text(
                     'Add a friend',

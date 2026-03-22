@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 class FriendBubble extends StatelessWidget {
   final String? initials;
   final String? name;
+  final String? avatarUrl;
   final Color? bgColor;
   final Color? textColor;
   final bool isAddButton;
@@ -12,6 +13,7 @@ class FriendBubble extends StatelessWidget {
     super.key,
     this.initials,
     this.name,
+    this.avatarUrl,
     this.bgColor,
     this.textColor,
     this.isAddButton = false,
@@ -20,6 +22,8 @@ class FriendBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasPhoto = avatarUrl != null && avatarUrl!.isNotEmpty;
+
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -37,13 +41,18 @@ class FriendBubble extends StatelessWidget {
                   strokeAlign: BorderSide.strokeAlignInside,
                 ),
               ),
-              child: const Icon(Icons.add_rounded, size: 22, color: Colors.grey),
+              child: const Icon(Icons.add_rounded,
+                  size: 22, color: Colors.grey),
             )
           else
             CircleAvatar(
               radius: 26,
               backgroundColor: bgColor,
-              child: Text(
+              foregroundImage:
+              hasPhoto ? NetworkImage(avatarUrl!) : null,
+              child: hasPhoto
+                  ? null
+                  : Text(
                 initials ?? '',
                 style: TextStyle(
                   fontSize: 15,
