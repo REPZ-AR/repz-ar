@@ -43,18 +43,9 @@ class LoginPage extends StatelessWidget {
                   const Spacer(flex: 12),
 
                   // Repz wordmark
-                  Text(
-                    'Repz',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w900,
-                      fontStyle: FontStyle.italic,
-                      fontSize: 70,
-                      height: 60 / 70,
-                      letterSpacing: -4,
-                      color: Colors.black,
-                    ),
+                  Image.asset(
+                    'assets/icons/repz-dark.png',
+                    height: 90,
                   ),
 
                   const Spacer(flex: 22),
