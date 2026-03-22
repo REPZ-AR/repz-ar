@@ -13,6 +13,9 @@ class FriendService {
         ? fullName
         : 'User ${id.substring(0, 6)}';
 
+    // First name only for display in bubbles
+    final firstName = name.split(' ').first;
+
     final parts = name.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
     final initials = parts.isEmpty
         ? '?'
@@ -23,7 +26,7 @@ class FriendService {
 
     return Friend(
       id: id,
-      name: name,
+      name: firstName,
       initials: initials,
       avatarUrl: row['avatar_url'] as String?,
     );
@@ -50,7 +53,6 @@ class FriendService {
     }).toList();
   }
 
-  // Fetch all accepted friends
   Future<List<Friend>> fetchFriends() async {
     final relations = await _supabase
         .from('friendships')
@@ -70,7 +72,6 @@ class FriendService {
     return _fetchFriendDetails(friendIds);
   }
 
-  // Fetch users not yet friends with (for add friend page)
   Future<List<Friend>> fetchAvailableUsers() async {
     final existing = await _supabase
         .from('friendships')
@@ -98,7 +99,6 @@ class FriendService {
         .toList();
   }
 
-  // Fetch pending requests sent TO the current user
   Future<List<Friend>> fetchPendingRequests() async {
     final relations = await _supabase
         .from('friendships')
@@ -116,7 +116,6 @@ class FriendService {
     return _fetchFriendDetails(requesterIds);
   }
 
-  // Send a friend request
   Future<void> sendFriendRequest({required String receiverId}) async {
     await _supabase.from('friendships').insert({
       'requester_id': _userId,
@@ -125,7 +124,6 @@ class FriendService {
     });
   }
 
-  // Accept a friend request
   Future<void> acceptFriendRequest({required String requesterId}) async {
     await _supabase
         .from('friendships')
@@ -134,7 +132,6 @@ class FriendService {
         .eq('receiver_id', _userId);
   }
 
-  // Decline a friend request
   Future<void> declineFriendRequest({required String requesterId}) async {
     await _supabase
         .from('friendships')
@@ -143,7 +140,6 @@ class FriendService {
         .eq('receiver_id', _userId);
   }
 
-  // Remove an existing friend
   Future<void> removeFriend({required String friendId}) async {
     await _supabase
         .from('friendships')
@@ -154,7 +150,6 @@ class FriendService {
     );
   }
 
-  // Add this method to FriendService
   Future<int> fetchPendingRequestCount() async {
     final result = await _supabase
         .from('friendships')
