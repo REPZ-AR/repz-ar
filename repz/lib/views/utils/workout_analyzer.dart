@@ -58,6 +58,8 @@ class WorkoutAnalyzer {
       case WorkoutType.squats:
       // Future implementation for squats
         return WorkoutFeedback("Good form!", {});
+      case WorkoutType.planks:
+        return _analyzePlanks(livePose, baselinePose);
       default:
         return WorkoutFeedback("Workout type not supported", {});
     }
@@ -182,6 +184,45 @@ class WorkoutAnalyzer {
           },
         );
       }
+    }
+
+    return WorkoutFeedback("Good form!", {});
+  }
+  static WorkoutFeedback _analyzePlanks(
+      Map<String, Point3D> livePose,
+      Map<String, Point3D> baselinePose,
+      ) {
+    final liveShoulder = livePose['leftShoulder'];
+    final liveHip = livePose['leftHip'];
+    final liveAnkle = livePose['leftAnkle'];
+
+    final baseShoulder = baselinePose['leftShoulder'];
+    final baseHip = baselinePose['leftHip'];
+    final baseAnkle = baselinePose['leftAnkle'];
+
+    if (liveShoulder == null ||
+        liveHip == null ||
+        liveAnkle == null ||
+        baseShoulder == null ||
+        baseHip == null ||
+        baseAnkle == null) {
+      return WorkoutFeedback("Tracking lost", {});
+    }
+
+    final liveBodyAngle = getAngle(liveShoulder, liveHip, liveAnkle);
+    final baseBodyAngle = getAngle(baseShoulder, baseHip, baseAnkle);
+
+    final difference = (liveBodyAngle - baseBodyAngle).abs();
+
+    if (difference > 15) {
+      return WorkoutFeedback(
+        "Keep your body aligned",
+        {
+          PoseLandmarkType.leftShoulder,
+          PoseLandmarkType.leftHip,
+          PoseLandmarkType.leftAnkle,
+        },
+      );
     }
 
     return WorkoutFeedback("Good form!", {});
