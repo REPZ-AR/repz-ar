@@ -1,14 +1,14 @@
 background
-Chest Press machine
+Chest Press
 Lat Pull Down
 Seated Cable Rows
-arm curl machine
-chest fly machine
-chinning dipping
-lateral raises machine
-leg extension
-leg press
-reg curl machine
-seated dip machine
-shoulder press machine
-smith machine
+Arm Curl
+Chest fly
+Chinning Dipping
+Lateral Raises
+Leg Extension
+Leg Press
+Leg Curl
+Seated Dip
+Shoulder Press
+Smith

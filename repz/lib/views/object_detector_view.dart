@@ -25,7 +25,7 @@ const String _workerTypeResult = 'result';
 const String _workerTypeError = 'error';
 const String _workerTypeShutdown = 'shutdown';
 
-String? _classifyWithInterpreter(
+Map<String, Object?>? _classifyWithInterpreter(
   Interpreter interpreter,
   List<String> labels,
   Map<String, Object?> request,
@@ -123,7 +123,9 @@ String? _classifyWithInterpreter(
       return null;
     }
 
-    return bestClass < labels.length ? labels[bestClass] : 'class_$bestClass';
+    final label =
+        bestClass < labels.length ? labels[bestClass] : 'class_$bestClass';
+    return {'label': label, 'confidence': bestScore};
   } catch (e) {
     print('$_classifierLogTag isolate classification error: $e');
     return null;
@@ -163,11 +165,16 @@ void _classifierWorkerMain(SendPort mainSendPort) {
           return;
         }
 
-        final label = _classifyWithInterpreter(interpreter!, labels, message);
+        final classification = _classifyWithInterpreter(
+          interpreter!,
+          labels,
+          message,
+        );
         mainSendPort.send({
           'type': _workerTypeResult,
           'requestId': requestId,
-          'label': label,
+          'label': classification?['label'],
+          'confidence': classification?['confidence'],
         });
         return;
       }
@@ -318,9 +325,17 @@ class _ObjectDetectorView extends State<ObjectDetectorView> {
       if (!mounted || generation != _classificationGeneration) return;
 
       final label = message['label'] as String?;
+      final confidence = (message['confidence'] as num?)?.toDouble();
       if (label == null || label.trim().isEmpty) return;
-      print('$_logTag showing overlay for $label');
-      await _showEquipmentOverlay(label);
+
+      final normalizedLabel = label.trim().toLowerCase();
+      if (normalizedLabel == 'background') {
+        print('$_logTag ignoring background classification');
+        return;
+      }
+
+      print('$_logTag showing overlay for $label (confidence=$confidence)');
+      await _showEquipmentOverlay(label, confidence: confidence);
       return;
     }
 
@@ -378,7 +393,10 @@ class _ObjectDetectorView extends State<ObjectDetectorView> {
     });
   }
 
-  Future<void> _showEquipmentOverlay(String equipmentName) async {
+  Future<void> _showEquipmentOverlay(
+    String equipmentName, {
+    double? confidence,
+  }) async {
     print('$_logTag _showEquipmentOverlay called for "$equipmentName"');
     if (!mounted || _isOverlayVisible) return;
 
@@ -397,7 +415,11 @@ class _ObjectDetectorView extends State<ObjectDetectorView> {
       await showDialog<void>(
         context: context,
         barrierDismissible: true,
-        builder: (_) => EquipmentOverlay(equipmentName: equipmentName),
+        builder:
+            (_) => EquipmentOverlay(
+              equipmentName: equipmentName,
+              confidence: confidence,
+            ),
       );
       print('$_logTag overlay dismissed for "$equipmentName"');
       _lastOverlayEquipment = normalizedName;
