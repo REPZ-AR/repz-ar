@@ -4,6 +4,13 @@ on:
     branches: [ "master" ]
   pull_request:
     branches: [ "master" ]
+  workflow_dispatch:
+    inputs:
+      update_goldens:
+        description: "Regenerate Linux goldens and commit them back"
+        required: false
+        default: false
+        type: boolean
 concurrency:
   group: flutter-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -65,6 +72,8 @@ jobs:
         working-directory: repz
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -80,3 +89,35 @@ jobs:
           name: golden-failures
           path: repz/test/performance/failures
           if-no-files-found: ignore
+
+  refresh-linux-goldens:
+    if: github.event_name == 'workflow_dispatch' && inputs.update_goldens
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: repz
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Update Linux goldens
+        run: flutter test --update-goldens test/performance/main_page_visual_smoke_test.dart
+      - name: Upload refreshed goldens
+        uses: actions/upload-artifact@v4
+        with:
+          name: refreshed-linux-goldens
+          path: repz/test/performance/goldens
+          if-no-files-found: error
+      - name: Commit refreshed goldens
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "test: refresh Linux goldens"
+          file_pattern: repz/test/performance/goldens/*.png
