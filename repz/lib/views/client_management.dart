@@ -3,6 +3,9 @@ import '../model/client.dart';
 import '../services/client_service.dart';
 import '../utils/theme_helper.dart';
 import '../widgets/common/client_card.dart';
+import 'client_detail_page.dart';
+import 'trainer_plan_library_page.dart';
+import 'trainer_schedule_editor_page.dart';
 
 class ClientManagementPage extends StatefulWidget {
   final bool isDarkMode;
@@ -63,6 +66,21 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
       });
     } finally {
       setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _openClientDetail(Client client) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder:
+            (context) => ClientDetailPage(
+              client: client,
+              isDarkMode: widget.isDarkMode,
+            ),
+      ),
+    );
+    if (mounted) {
+      await _loadClients();
     }
   }
 
@@ -259,15 +277,34 @@ class _ClientManagementPageState extends State<ClientManagementPage> {
                               isExpanded ? null : client.id;
                             });
                           },
-                          onAddSchedule: () {
-                            ScaffoldMessenger.of(context)
-                                .showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                    'Add schedule for ${client.name}'),
-                                backgroundColor: accentColor,
+                          onViewClient: () => _openClientDetail(client),
+                          onAssignPlan: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder:
+                                    (context) => TrainerPlanLibraryPage(
+                                      isDarkMode: widget.isDarkMode,
+                                      preselectedClientId: client.id,
+                                    ),
                               ),
                             );
+                            if (mounted) {
+                              await _loadClients();
+                            }
+                          },
+                          onProposeSchedule: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder:
+                                    (context) => TrainerScheduleEditorPage(
+                                      client: client,
+                                      isDarkMode: widget.isDarkMode,
+                                    ),
+                              ),
+                            );
+                            if (mounted) {
+                              await _loadClients();
+                            }
                           },
                         );
                       },

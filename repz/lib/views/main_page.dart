@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:repz/model/workout_plan.dart';
 import 'package:repz/views/client_management.dart';
 import 'package:repz/views/feed_page.dart';
 import 'package:repz/views/home_page.dart';
-import 'package:repz/views/menu_page.dart';
+import 'package:repz/views/profile_page.dart';
+import 'package:repz/views/trainer_home_page.dart';
+import 'package:repz/views/trainer_plan_library_page.dart';
 import 'package:repz/views/trainer_management.dart';
 import 'package:repz/views/workout_builder_page.dart';
+import 'package:repz/views/workout_plan_helpers.dart';
 
 import '../main.dart';
+import '../repositories/workout_plan_repository.dart';
 import 'object_detector_view.dart';
 
 class MainPage extends StatefulWidget {
@@ -39,6 +44,7 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage>
     with SingleTickerProviderStateMixin {
+  final WorkoutPlanRepository _workoutPlanRepository = WorkoutPlanRepository();
   int _selectedIndex = 0;
   bool _isCameraMenuOpen = false;
   late final AnimationController _menuController;
@@ -63,11 +69,17 @@ class _MainPageState extends State<MainPage>
 
   void _buildPages() {
     _pages = {
-      0: HomePage(
-          isDarkMode: widget.isDarkMode,
-          avatarUrl: widget.avatarUrl,
-          userId: widget.userId,
-          workoutGateway: widget.workoutGateway),
+      0: widget.isCoach
+          ? TrainerHomePage(
+              isDarkMode: widget.isDarkMode,
+              avatarUrl: widget.avatarUrl,
+            )
+          : HomePage(
+              isDarkMode: widget.isDarkMode,
+              avatarUrl: widget.avatarUrl,
+              userId: widget.userId,
+              workoutGateway: widget.workoutGateway,
+            ),
       1: widget.isCoach
           ? ClientManagementPage(
         isDarkMode: widget.isDarkMode,
@@ -75,14 +87,15 @@ class _MainPageState extends State<MainPage>
       )
           : TrainerManagementPage(isDarkMode: widget.isDarkMode),
       3: FeedPage(isDarkMode: widget.isDarkMode),
-      4: MenuPage(
-        isDarkMode: widget.isDarkMode,
-        avatarUrl: widget.avatarUrl,
-        userName: widget.userName,
-        userEmail: widget.userEmail,
-        onLogout: widget.onLogout,
-        onThemeChanged: widget.onThemeChanged,
-      ),
+      4: ProfilePage(
+          isDarkMode: widget.isDarkMode,
+          isCoach: widget.isCoach,
+          avatarUrl: widget.avatarUrl,
+          userName: widget.userName,
+          userEmail: widget.userEmail,
+          onLogout: widget.onLogout,
+          onThemeChanged: widget.onThemeChanged,
+        ),
     };
   }
 
@@ -90,7 +103,10 @@ class _MainPageState extends State<MainPage>
   void didUpdateWidget(MainPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.isDarkMode != widget.isDarkMode ||
-        oldWidget.avatarUrl != widget.avatarUrl) {
+        oldWidget.isCoach != widget.isCoach ||
+        oldWidget.avatarUrl != widget.avatarUrl ||
+        oldWidget.userId != widget.userId ||
+        oldWidget.workoutGateway != widget.workoutGateway) {
       _buildPages();
     }
   }
@@ -145,15 +161,65 @@ class _MainPageState extends State<MainPage>
   Future<void> _openWorkoutBuilder() async {
     _closeCameraMenu();
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => const WorkoutBuilderPage()),
+      MaterialPageRoute(
+        builder:
+            (context) => WorkoutBuilderPage(
+              planScope:
+                  widget.isCoach
+                      ? WorkoutPlanScope.trainerTemplate
+                      : WorkoutPlanScope.personal,
+            ),
+      ),
     );
   }
 
-  void _showComingSoon(String message) {
+  Future<void> _openTrainerPlanLibrary() async {
     _closeCameraMenu();
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder:
+            (context) => TrainerPlanLibraryPage(isDarkMode: widget.isDarkMode),
+      ),
+    );
+  }
+
+  Future<void> _startTodaysPlan() async {
+    if (widget.isCoach) {
+      return;
+    }
+    _closeCameraMenu();
+
+    try {
+      final todaysPlan = await _workoutPlanRepository.fetchScheduledPlanForDay(
+        DateTime.now().weekday,
+      );
+
+      if (!mounted) return;
+
+      if (todaysPlan == null) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text(
+                'No plan is scheduled for today yet. Set one from Weekly Schedule or follow a pre-built plan on Home.',
+              ),
+            ),
+          );
+        return;
+      }
+
+      await WorkoutPlanHelpers.startPlan(context, todaysPlan);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('Could not start today\'s scheduled plan.'),
+          ),
+        );
+    }
   }
 
   @override
@@ -190,7 +256,7 @@ class _MainPageState extends State<MainPage>
               ),
               BottomNavigationBarItem(
                 icon: _buildCameraNavButton(accentColor),
-                label: '',
+                label: widget.isCoach ? 'Assign' : '',
               ),
               BottomNavigationBarItem(
                 icon: const Icon(Icons.whatshot_outlined),
@@ -244,8 +310,12 @@ class _MainPageState extends State<MainPage>
                   _buildRadialAction(
                     animation: _menuAnimation,
                     offset: const Offset(-112, -118),
-                    icon: Icons.edit_note_rounded,
-                    label: 'Create Workout Plan',
+                    icon: widget.isCoach
+                        ? Icons.edit_note_rounded
+                        : Icons.edit_note_rounded,
+                    label: widget.isCoach
+                        ? 'Create Client Plan'
+                        : 'Create Workout Plan',
                     accentColor: accentColor,
                     labelColor: labelColor,
                     onTap: _openWorkoutBuilder,
@@ -253,21 +323,34 @@ class _MainPageState extends State<MainPage>
                   _buildRadialAction(
                     animation: _menuAnimation,
                     offset: const Offset(0, -156),
-                    icon: Icons.center_focus_strong,
-                    label: 'Object Detection View',
+                    icon: widget.isCoach
+                        ? Icons.playlist_add_check_rounded
+                        : Icons.center_focus_strong,
+                    label: widget.isCoach
+                        ? 'Assign Existing Plan'
+                        : 'Equipment Detection View',
                     accentColor: accentColor,
                     labelColor: labelColor,
-                    onTap: _openObjectDetection,
+                    onTap:
+                        widget.isCoach
+                            ? _openTrainerPlanLibrary
+                            : _openObjectDetection,
                   ),
                   _buildRadialAction(
                     animation: _menuAnimation,
                     offset: const Offset(112, -118),
-                    icon: Icons.play_arrow_rounded,
-                    label: "Start Today's Plan",
+                    icon: widget.isCoach
+                        ? Icons.folder_copy_outlined
+                        : Icons.play_arrow_rounded,
+                    label: widget.isCoach
+                        ? 'View Client Plans'
+                        : "Start Today's Plan",
                     accentColor: accentColor,
                     labelColor: labelColor,
-                    onTap: () =>
-                        _showComingSoon("Start today's plan coming soon"),
+                    onTap:
+                        widget.isCoach
+                            ? _openTrainerPlanLibrary
+                            : _startTodaysPlan,
                   ),
                   GestureDetector(
                     onTap: _toggleCameraMenu,

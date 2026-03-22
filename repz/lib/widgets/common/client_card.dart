@@ -8,7 +8,9 @@ class ClientCard extends StatelessWidget {
   final Color accentColor;
   final Color cardColor;
   final VoidCallback onTap;
-  final VoidCallback onAddSchedule;
+  final VoidCallback onViewClient;
+  final VoidCallback onAssignPlan;
+  final VoidCallback onProposeSchedule;
 
   const ClientCard({
     Key? key,
@@ -18,7 +20,9 @@ class ClientCard extends StatelessWidget {
     required this.accentColor,
     required this.cardColor,
     required this.onTap,
-    required this.onAddSchedule,
+    required this.onViewClient,
+    required this.onAssignPlan,
+    required this.onProposeSchedule,
   }) : super(key: key);
 
   Color _avatarColor() {
@@ -127,7 +131,7 @@ class ClientCard extends StatelessWidget {
                           padding: const EdgeInsets.all(16),
                           child: Row(
                             children: [
-                              // Avatar with count badge
+                              // Avatar with status dot badge
                               Stack(
                                 clipBehavior: Clip.none,
                                 children: [
@@ -255,28 +259,60 @@ class ClientCard extends StatelessWidget {
 
                               const SizedBox(height: 20),
 
-                              // Add Schedule button
+                              // ── View & Assign buttons ────────
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      onPressed: onViewClient,
+                                      icon: const Icon(
+                                          Icons.visibility_outlined,
+                                          size: 18),
+                                      label: const Text('View',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 15)),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      onPressed: onAssignPlan,
+                                      icon: const Icon(
+                                          Icons.playlist_add_check_rounded,
+                                          size: 18),
+                                      label: const Text('Assign',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 15)),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: accentColor,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 14),
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                            BorderRadius.circular(14)),
+                                        elevation: 0,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+
+                              // ── Propose Schedule button ──────
                               SizedBox(
                                 width: double.infinity,
-                                child: ElevatedButton.icon(
-                                  onPressed: onAddSchedule,
+                                child: TextButton.icon(
+                                  onPressed: onProposeSchedule,
                                   icon: const Icon(
                                       Icons.calendar_month_rounded,
                                       size: 18),
-                                  label: const Text('Add Schedule',
+                                  label: const Text('Propose Schedule',
                                       style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           fontSize: 15)),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: accentColor,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 14),
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                        BorderRadius.circular(14)),
-                                    elevation: 0,
-                                  ),
                                 ),
                               ),
                             ],
