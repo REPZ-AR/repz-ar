@@ -1079,7 +1079,7 @@ class _RecommendedPlanCard extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
             decoration: BoxDecoration(
-              color: accentColor.withAlpha(30),
+              color: accentColor.withAlpha(10),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(24),
                 topRight: Radius.circular(24),
@@ -1096,7 +1096,7 @@ class _RecommendedPlanCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: accentColor,
+                      color: textColor,
                     ),
                   ),
                 ),

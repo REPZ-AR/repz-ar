@@ -2,24 +2,32 @@ import 'package:flutter/material.dart';
 import '../model/trainer.dart';
 import '../services/trainer_service.dart';
 import '../utils/theme_helper.dart';
-import '../widgets/common/trainer_list.dart';
+import '../widgets/common/trainer_card.dart';
 
 class TrainerManagementPage extends StatefulWidget {
   final bool isDarkMode;
+  final VoidCallback? onBack;
 
-  const TrainerManagementPage({Key? key, required this.isDarkMode})
-      : super(key: key);
+  const TrainerManagementPage({
+    Key? key,
+    required this.isDarkMode,
+    this.onBack,
+  }) : super(key: key);
 
   @override
-  State<TrainerManagementPage> createState() => _TrainerManagementPageState();
+  State<TrainerManagementPage> createState() =>
+      _TrainerManagementPageState();
 }
 
-class _TrainerManagementPageState extends State<TrainerManagementPage> {
+class _TrainerManagementPageState
+    extends State<TrainerManagementPage> {
   static const String _bgAsset = 'assets/images/client_ui_image.png';
 
   List<Trainer> _trainers = [];
+  List<Trainer> _filtered = [];
   bool _loading = true;
   String? _expandedTrainerId;
+  final _searchController = TextEditingController();
 
   final _service = TrainerService();
 
@@ -27,15 +35,44 @@ class _TrainerManagementPageState extends State<TrainerManagementPage> {
   void initState() {
     super.initState();
     _loadTrainers();
+    _searchController.addListener(_onSearch);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearch() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      _filtered = query.isEmpty
+          ? _trainers
+          : _trainers
+          .where((t) => t.name.toLowerCase().contains(query))
+          .toList();
+    });
   }
 
   Future<void> _loadTrainers() async {
     setState(() => _loading = true);
     try {
       final trainers = await _service.fetchTrainers();
-      setState(() => _trainers = trainers);
+      setState(() {
+        _trainers = trainers;
+        _filtered = trainers;
+      });
     } finally {
       setState(() => _loading = false);
+    }
+  }
+
+  void _handleBack() {
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context);
+    } else {
+      widget.onBack?.call();
     }
   }
 
@@ -47,7 +84,7 @@ class _TrainerManagementPageState extends State<TrainerManagementPage> {
       builder: (_) => _AddTrainerSheet(
         service: _service,
         isDarkMode: widget.isDarkMode,
-        onAdded: _loadTrainers, // refresh list after adding
+        onAdded: _loadTrainers,
       ),
     );
   }
@@ -55,7 +92,8 @@ class _TrainerManagementPageState extends State<TrainerManagementPage> {
   @override
   Widget build(BuildContext context) {
     final accentColor =
-        AppTheme.getAccentColor(widget.isDarkMode) ?? const Color(0xFF6C63FF);
+        AppTheme.getAccentColor(widget.isDarkMode) ??
+            const Color(0xFF6C63FF);
     final textColor =
         AppTheme.getTextColor(widget.isDarkMode) ?? Colors.black;
     final cardColor = widget.isDarkMode
@@ -63,14 +101,10 @@ class _TrainerManagementPageState extends State<TrainerManagementPage> {
         : const Color(0xFFF5F5F5).withAlpha(200);
 
     return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        onPressed: _openAddTrainerSheet,
-        backgroundColor: accentColor,
-        child: const Icon(Icons.person_add_rounded, color: Colors.white),
-      ),
       body: Stack(
         fit: StackFit.expand,
         children: [
+          // ── Background image ──────────────────────────
           Positioned.fill(
             child: Image.asset(
               _bgAsset,
@@ -81,19 +115,23 @@ class _TrainerManagementPageState extends State<TrainerManagementPage> {
           ),
           Positioned.fill(
             child: ColoredBox(
-              color: Colors.black.withAlpha(widget.isDarkMode ? 160 : 80),
+              color: Colors.black
+                  .withAlpha(widget.isDarkMode ? 160 : 80),
             ),
           ),
+
+          // ── Main content ──────────────────────────────
           SafeArea(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // ── Header ──────────────────────────────
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
                   child: Row(
                     children: [
                       GestureDetector(
-                        onTap: () => Navigator.pop(context),
+                        onTap: _handleBack,
                         child: Container(
                           width: 40,
                           height: 40,
@@ -101,14 +139,17 @@ class _TrainerManagementPageState extends State<TrainerManagementPage> {
                             color: cardColor,
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Icon(Icons.arrow_back_ios_new_rounded,
-                              size: 18, color: textColor),
+                          child: Icon(
+                              Icons.arrow_back_ios_new_rounded,
+                              size: 18,
+                              color: textColor),
                         ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment:
+                          CrossAxisAlignment.start,
                           children: [
                             const Text('My Trainers',
                                 style: TextStyle(
@@ -116,45 +157,221 @@ class _TrainerManagementPageState extends State<TrainerManagementPage> {
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white,
                                     letterSpacing: -0.5)),
-                            Text('${_trainers.length} active trainers',
+                            Text(
+                                'Manage your trainer connections',
                                 style: const TextStyle(
-                                    fontSize: 13, color: Colors.white70)),
+                                    fontSize: 13,
+                                    color: Colors.white70)),
                           ],
+                        ),
+                      ),
+                      // ── Add Trainer button in header ───
+                      GestureDetector(
+                        onTap: _openAddTrainerSheet,
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: accentColor,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                              Icons.person_add_rounded,
+                              size: 20,
+                              color: Colors.white),
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
+
+                const SizedBox(height: 16),
+
+                // ── Search bar ───────────────────────────
+                Padding(
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 20),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: cardColor,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      style:
+                      const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: 'Search trainers...',
+                        hintStyle: const TextStyle(
+                            color: Colors.white54, fontSize: 14),
+                        prefixIcon: const Icon(
+                            Icons.search_rounded,
+                            color: Colors.white54,
+                            size: 20),
+                        suffixIcon:
+                        _searchController.text.isNotEmpty
+                            ? GestureDetector(
+                          onTap: () =>
+                              _searchController.clear(),
+                          child: const Icon(
+                              Icons.close_rounded,
+                              color: Colors.white54,
+                              size: 18),
+                        )
+                            : null,
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                            vertical: 14),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // ── Section header ───────────────────────
+                Padding(
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 20),
+                  child: Text(
+                    'Active Trainers (${_trainers.length})',
+                    style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white70,
+                        letterSpacing: 0.5),
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                // ── Trainer List ─────────────────────────
                 Expanded(
                   child: _loading
                       ? Center(
-                      child:
-                      CircularProgressIndicator(color: accentColor))
+                      child: CircularProgressIndicator(
+                          color: accentColor))
                       : _trainers.isEmpty
                       ? _buildEmptyState(accentColor)
-                      : TrainerList(
-                    trainers: _trainers,
-                    expandedTrainerId: _expandedTrainerId,
-                    isDarkMode: widget.isDarkMode,
-                    accentColor: accentColor,
-                    cardColor: cardColor,
+                      : RefreshIndicator(
                     onRefresh: _loadTrainers,
-                    onToggleExpand: (id) => setState(() {
-                      _expandedTrainerId =
-                      _expandedTrainerId == id ? null : id;
-                    }),
-                    onRemove: (trainer) async {
-                      await _service.removeTrainer(trainerUserId: trainer.id);
-                      _loadTrainers();
-                    },
+                    color: accentColor,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(
+                          20, 0, 20, 100),
+                      itemCount: _filtered.length,
+                      itemBuilder: (context, index) {
+                        final trainer = _filtered[index];
+                        final isExpanded =
+                            _expandedTrainerId ==
+                                trainer.id;
+                        return TrainerCard(
+                          trainer: trainer,
+                          isExpanded: isExpanded,
+                          isDarkMode: widget.isDarkMode,
+                          accentColor: accentColor,
+                          cardColor: cardColor,
+                          onTap: () => setState(() {
+                            _expandedTrainerId =
+                            isExpanded
+                                ? null
+                                : trainer.id;
+                          }),
+                          onRemove: () async {
+                            await _service.removeTrainer(
+                                trainerUserId: trainer.id);
+                            _loadTrainers();
+                          },
+                        );
+                      },
+                    ),
                   ),
                 ),
               ],
             ),
           ),
+
+          // ── Floating stats strip ──────────────────────
+          if (!_loading && _trainers.isNotEmpty)
+            Positioned(
+              left: 20,
+              right: 20,
+              bottom: 20,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 20, vertical: 14),
+                decoration: BoxDecoration(
+                  color: widget.isDarkMode
+                      ? const Color(0xFF1E1E1E).withAlpha(230)
+                      : Colors.white.withAlpha(230),
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(40),
+                      blurRadius: 20,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _statItem(
+                        Icons.people_rounded,
+                        '${_trainers.length}',
+                        'Trainers',
+                        accentColor,
+                        widget.isDarkMode),
+                    _statDivider(widget.isDarkMode),
+                    _statItem(
+                        Icons.check_circle_outline_rounded,
+                        '${_trainers.length}',
+                        'Active',
+                        const Color(0xFF4CAF50),
+                        widget.isDarkMode),
+                    _statDivider(widget.isDarkMode),
+                    _statItem(
+                        Icons.calendar_today_rounded,
+                        '0',
+                        'Sessions',
+                        const Color(0xFFFFC107),
+                        widget.isDarkMode),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
+    );
+  }
+
+  Widget _statItem(IconData icon, String value, String label,
+      Color color, bool isDarkMode) {
+    final textColor =
+    isDarkMode ? Colors.white : const Color(0xFF1A1A1A);
+    final subColor =
+    isDarkMode ? Colors.white54 : const Color(0xFF888888);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: color, size: 20),
+        const SizedBox(height: 4),
+        Text(value,
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: textColor)),
+        Text(label,
+            style: TextStyle(fontSize: 11, color: subColor)),
+      ],
+    );
+  }
+
+  Widget _statDivider(bool isDarkMode) {
+    return Container(
+      height: 36,
+      width: 1,
+      color: isDarkMode ? Colors.white12 : Colors.black12,
     );
   }
 
@@ -181,13 +398,32 @@ class _TrainerManagementPageState extends State<TrainerManagementPage> {
                   color: Colors.white)),
           const SizedBox(height: 8),
           const Text('Tap + to find a trainer',
-              style: TextStyle(fontSize: 14, color: Colors.white70)),
+              style: TextStyle(
+                  fontSize: 14, color: Colors.white70)),
+          const SizedBox(height: 24),
+          GestureDetector(
+            onTap: _openAddTrainerSheet,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 24, vertical: 12),
+              decoration: BoxDecoration(
+                color: accentColor,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Text('Find a Trainer',
+                  style: TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14)),
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
+// ── Add Trainer Sheet ────────────────────────────────────────────────────────
 class _AddTrainerSheet extends StatefulWidget {
   final TrainerService service;
   final bool isDarkMode;
@@ -206,7 +442,7 @@ class _AddTrainerSheet extends StatefulWidget {
 class _AddTrainerSheetState extends State<_AddTrainerSheet> {
   List<Trainer> _available = [];
   bool _loading = true;
-  String? _addingId; // tracks which trainer is being added
+  String? _addingId;
 
   @override
   void initState() {
@@ -247,6 +483,8 @@ class _AddTrainerSheetState extends State<_AddTrainerSheet> {
     final sheetColor = widget.isDarkMode
         ? const Color(0xFF1A1A1A)
         : const Color(0xFFF9F9F9);
+    final textColor =
+    widget.isDarkMode ? Colors.white : Colors.black;
 
     return DraggableScrollableSheet(
       initialChildSize: 0.6,
@@ -255,11 +493,11 @@ class _AddTrainerSheetState extends State<_AddTrainerSheet> {
       builder: (_, scrollController) => Container(
         decoration: BoxDecoration(
           color: sheetColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(24)),
         ),
         child: Column(
           children: [
-            // Handle
             const SizedBox(height: 12),
             Container(
               width: 40,
@@ -270,8 +508,6 @@ class _AddTrainerSheetState extends State<_AddTrainerSheet> {
               ),
             ),
             const SizedBox(height: 16),
-
-            // Title
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
@@ -280,32 +516,32 @@ class _AddTrainerSheetState extends State<_AddTrainerSheet> {
                       style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: widget.isDarkMode
-                              ? Colors.white
-                              : Colors.black)),
+                          color: textColor)),
                 ],
               ),
             ),
             const SizedBox(height: 16),
-
-            // List
             Expanded(
               child: _loading
                   ? Center(
-                  child: CircularProgressIndicator(color: accentColor))
+                  child: CircularProgressIndicator(
+                      color: accentColor))
                   : _available.isEmpty
                   ? const Center(
                   child: Text('No available trainers',
-                      style: TextStyle(color: Colors.grey)))
+                      style:
+                      TextStyle(color: Colors.grey)))
                   : ListView.separated(
                 controller: scrollController,
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                padding: const EdgeInsets.fromLTRB(
+                    20, 0, 20, 32),
                 itemCount: _available.length,
                 separatorBuilder: (_, __) =>
                 const SizedBox(height: 10),
                 itemBuilder: (context, index) {
                   final trainer = _available[index];
-                  final isAdding = _addingId == trainer.id;
+                  final isAdding =
+                      _addingId == trainer.id;
                   return _AvailableTrainerTile(
                     trainer: trainer,
                     accentColor: accentColor,
@@ -340,8 +576,11 @@ class _AvailableTrainerTile extends StatelessWidget {
 
   String get _initials {
     final parts = trainer.name.trim().split(' ');
-    if (parts.length >= 2) return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-    return trainer.name.isNotEmpty ? trainer.name[0].toUpperCase() : '?';
+    if (parts.length >= 2)
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    return trainer.name.isNotEmpty
+        ? trainer.name[0].toUpperCase()
+        : '?';
   }
 
   @override
@@ -349,16 +588,19 @@ class _AvailableTrainerTile extends StatelessWidget {
     final cardColor = isDarkMode
         ? const Color(0xFF2A2A2A)
         : const Color(0xFFEEEEEE);
+    final textColor = isDarkMode ? Colors.white : Colors.black;
 
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(16),
+        border: Border(
+            left: BorderSide(
+                color: const Color(0xFF4CAF50), width: 4)),
       ),
       child: Row(
         children: [
-          // Avatar
           Container(
             width: 48,
             height: 48,
@@ -369,7 +611,8 @@ class _AvailableTrainerTile extends StatelessWidget {
             child: trainer.avatarUrl != null
                 ? ClipRRect(
               borderRadius: BorderRadius.circular(14),
-              child: Image.network(trainer.avatarUrl!, fit: BoxFit.cover),
+              child: Image.network(trainer.avatarUrl!,
+                  fit: BoxFit.cover),
             )
                 : Center(
               child: Text(_initials,
@@ -380,19 +623,32 @@ class _AvailableTrainerTile extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 14),
-
-          // Name
           Expanded(
-            child: Text(
-              trainer.name,
-              style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: isDarkMode ? Colors.white : Colors.black),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(trainer.name,
+                    style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: textColor)),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4CAF50).withAlpha(30),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Text('Available',
+                      style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF4CAF50))),
+                ),
+              ],
             ),
           ),
-
-          // Add button
           isAdding
               ? SizedBox(
             width: 24,
@@ -410,7 +666,7 @@ class _AvailableTrainerTile extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(Icons.add_rounded,
-                  color: Colors.white, size: 22),
+                  color: Colors.black, size: 22),
             ),
           ),
         ],

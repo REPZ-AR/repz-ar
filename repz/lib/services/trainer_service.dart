@@ -7,27 +7,29 @@ class TrainerService {
   String get _clientId => _supabase.auth.currentUser!.id;
 
   Trainer _trainerFromUserInfoRow(
-    Map<String, dynamic> row, {
-    required String subtitle,
-  }) {
+      Map<String, dynamic> row, {
+        required String subtitle,
+        DateTime? joinedDate,
+      }) {
     final trainerId = row['user_id'] as String;
     final fullName = (row['full_name'] as String?)?.trim();
 
     return Trainer(
       id: trainerId,
-      name:
-          fullName != null && fullName.isNotEmpty
-              ? fullName
-              : 'Trainer ${trainerId.substring(0, 6)}',
+      name: fullName != null && fullName.isNotEmpty
+          ? fullName
+          : 'Trainer ${trainerId.substring(0, 6)}',
       subtitle: subtitle,
       avatarUrl: row['avatar_url'] as String?,
+      joinedDate: joinedDate,
     );
   }
 
   Future<List<Trainer>> _fetchTrainerDetails(
-    List<String> trainerIds, {
-    required String subtitle,
-  }) async {
+      List<String> trainerIds, {
+        required String subtitle,
+        Map<String, DateTime?>? joinedDates,
+      }) async {
     if (trainerIds.isEmpty) return const <Trainer>[];
 
     final rows = await _supabase
@@ -45,27 +47,40 @@ class TrainerService {
       return _trainerFromUserInfoRow(
         userInfo ?? <String, dynamic>{'user_id': trainerId},
         subtitle: subtitle,
+        joinedDate: joinedDates?[trainerId],
       );
     }).toList();
   }
 
   Future<List<Trainer>> fetchTrainers() async {
+    // Step 1: fetch relationships with created_at
     final relations = await _supabase
         .from('trainer_client')
-        .select('trainer_id')
+        .select('trainer_id, created_at')
         .eq('client_id', _clientId)
         .eq('status', 'active');
 
     if (relations.isEmpty) return [];
 
-    final trainerIds = (relations as List)
-        .cast<Map<String, dynamic>>()
-        .map((row) => row['trainer_id'] as String)
-        .toList();
+    final rows =
+    (relations as List).cast<Map<String, dynamic>>();
+
+    // Step 2: extract trainer IDs
+    final trainerIds =
+    rows.map((row) => row['trainer_id'] as String).toList();
+
+    // Step 3: build joined date lookup map
+    final joinedDates = {
+      for (final row in rows)
+        row['trainer_id'] as String: row['created_at'] != null
+            ? DateTime.tryParse(row['created_at'] as String)
+            : null,
+    };
 
     return _fetchTrainerDetails(
       trainerIds,
       subtitle: 'Your Trainer',
+      joinedDates: joinedDates,
     );
   }
 
@@ -88,13 +103,14 @@ class TrainerService {
 
     return (result as List)
         .cast<Map<String, dynamic>>()
-        .where((row) => !existingIds.contains(row['user_id'] as String))
+        .where(
+            (row) => !existingIds.contains(row['user_id'] as String))
         .map(
           (row) => _trainerFromUserInfoRow(
-            row,
-            subtitle: 'Available',
-          ),
-        )
+        row,
+        subtitle: 'Available',
+      ),
+    )
         .toList();
   }
 
@@ -107,7 +123,8 @@ class TrainerService {
     });
   }
 
-  Future<void> removeTrainer({required String trainerUserId}) async {
+  Future<void> removeTrainer(
+      {required String trainerUserId}) async {
     await _supabase
         .from('trainer_client')
         .delete()
