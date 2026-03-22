@@ -22,8 +22,14 @@ class MainPage extends StatefulWidget {
   final String? userEmail;
   final String userId;
   final WorkoutGateway workoutGateway;
+  final WorkoutPlanRepository? workoutPlanRepository;
   final Future<void> Function()? onLogout;
   final Function(bool) onThemeChanged;
+  final Map<int, Widget>? pageOverrides;
+  final Future<void> Function()? onOpenWorkoutBuilderOverride;
+  final Future<void> Function()? onOpenObjectDetectionOverride;
+  final Future<void> Function()? onOpenTrainerPlanLibraryOverride;
+  final Future<void> Function()? onStartTodaysPlanOverride;
 
   const MainPage({
     super.key,
@@ -32,10 +38,16 @@ class MainPage extends StatefulWidget {
     required this.onThemeChanged,
     required this.userId,
     required this.workoutGateway,
+    this.workoutPlanRepository,
     this.avatarUrl,
     this.userName,
     this.userEmail,
     this.onLogout,
+    this.pageOverrides,
+    this.onOpenWorkoutBuilderOverride,
+    this.onOpenObjectDetectionOverride,
+    this.onOpenTrainerPlanLibraryOverride,
+    this.onStartTodaysPlanOverride,
   });
 
   @override
@@ -44,13 +56,17 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage>
     with SingleTickerProviderStateMixin {
-  final WorkoutPlanRepository _workoutPlanRepository = WorkoutPlanRepository();
   int _selectedIndex = 0;
   bool _isCameraMenuOpen = false;
   late final AnimationController _menuController;
   late final Animation<double> _menuAnimation;
 
   late Map<int, Widget> _pages;
+  WorkoutPlanRepository? _workoutPlanRepository;
+
+  WorkoutPlanRepository get _planRepository =>
+      _workoutPlanRepository ??=
+          widget.workoutPlanRepository ?? WorkoutPlanRepository();
 
   @override
   void initState() {
@@ -100,6 +116,10 @@ class _MainPageState extends State<MainPage>
           onThemeChanged: widget.onThemeChanged,
         ),
     };
+
+    if (widget.pageOverrides != null) {
+      _pages.addAll(widget.pageOverrides!);
+    }
   }
 
   @override
@@ -109,7 +129,8 @@ class _MainPageState extends State<MainPage>
         oldWidget.isCoach != widget.isCoach ||
         oldWidget.avatarUrl != widget.avatarUrl ||
         oldWidget.userId != widget.userId ||
-        oldWidget.workoutGateway != widget.workoutGateway) {
+        oldWidget.workoutGateway != widget.workoutGateway ||
+        oldWidget.pageOverrides != widget.pageOverrides) {
       _buildPages();
     }
   }
@@ -156,6 +177,10 @@ class _MainPageState extends State<MainPage>
 
   Future<void> _openObjectDetection() async {
     _closeCameraMenu();
+    if (widget.onOpenObjectDetectionOverride != null) {
+      await widget.onOpenObjectDetectionOverride!();
+      return;
+    }
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => ObjectDetectorView()),
     );
@@ -163,6 +188,10 @@ class _MainPageState extends State<MainPage>
 
   Future<void> _openWorkoutBuilder() async {
     _closeCameraMenu();
+    if (widget.onOpenWorkoutBuilderOverride != null) {
+      await widget.onOpenWorkoutBuilderOverride!();
+      return;
+    }
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder:
@@ -178,6 +207,10 @@ class _MainPageState extends State<MainPage>
 
   Future<void> _openTrainerPlanLibrary() async {
     _closeCameraMenu();
+    if (widget.onOpenTrainerPlanLibraryOverride != null) {
+      await widget.onOpenTrainerPlanLibraryOverride!();
+      return;
+    }
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder:
@@ -191,9 +224,13 @@ class _MainPageState extends State<MainPage>
       return;
     }
     _closeCameraMenu();
+    if (widget.onStartTodaysPlanOverride != null) {
+      await widget.onStartTodaysPlanOverride!();
+      return;
+    }
 
     try {
-      final todaysPlan = await _workoutPlanRepository.fetchScheduledPlanForDay(
+      final todaysPlan = await _planRepository.fetchScheduledPlanForDay(
         DateTime.now().weekday,
       );
 
@@ -370,6 +407,9 @@ class _MainPageState extends State<MainPage>
 
   Widget _buildCameraNavButton(Color accentColor, {bool isOpen = false}) {
     return AnimatedScale(
+      key: ValueKey<String>(
+        isOpen ? 'main_page_camera_button_open' : 'main_page_camera_button',
+      ),
       scale: isOpen ? 1.08 : 1,
       duration: const Duration(milliseconds: 180),
       child: Container(
