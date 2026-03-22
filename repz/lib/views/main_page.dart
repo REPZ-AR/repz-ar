@@ -170,8 +170,17 @@ class _MainPageState extends State<MainPage>
                 label: 'Home',
               ),
               BottomNavigationBarItem(
-                icon: const Icon(Icons.search_outlined),
-                activeIcon: Icon(Icons.search, color: accentColor),
+                icon: Icon(
+                  widget.isCoach
+                      ? Icons.group_outlined
+                      : Icons.fitness_center_outlined,
+                ),
+                activeIcon: Icon(
+                  widget.isCoach
+                      ? Icons.group
+                      : Icons.fitness_center,
+                  color: accentColor,
+                ),
                 label: widget.isCoach ? 'Clients' : 'Trainers',
               ),
               BottomNavigationBarItem(
@@ -179,14 +188,32 @@ class _MainPageState extends State<MainPage>
                 label: '',
               ),
               BottomNavigationBarItem(
-                icon: const Icon(Icons.folder_outlined),
-                activeIcon: Icon(Icons.folder, color: accentColor),
+                icon: const Icon(Icons.whatshot_outlined),
+                activeIcon: Icon(Icons.whatshot, color: accentColor),
                 label: 'Feed',
               ),
               BottomNavigationBarItem(
-                icon: const Icon(Icons.menu_outlined),
-                activeIcon: Icon(Icons.menu, color: accentColor),
-                label: 'Menu',
+                icon: CircleAvatar(
+                  radius: 14,
+                  backgroundColor: accentColor.withAlpha(40),
+                  backgroundImage: widget.avatarUrl != null
+                      ? NetworkImage(widget.avatarUrl!)
+                      : null,
+                  child: widget.avatarUrl == null
+                      ? Icon(Icons.person_outlined, size: 16, color: accentColor)
+                      : null,
+                ),
+                activeIcon: CircleAvatar(
+                  radius: 14,
+                  backgroundColor: accentColor.withAlpha(60),
+                  backgroundImage: widget.avatarUrl != null
+                      ? NetworkImage(widget.avatarUrl!)
+                      : null,
+                  child: widget.avatarUrl == null
+                      ? Icon(Icons.person, size: 16, color: accentColor)
+                      : null,
+                ),
+                label: 'Profile',
               ),
             ],
           ),
