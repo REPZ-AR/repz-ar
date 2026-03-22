@@ -45,7 +45,8 @@ class _WorkoutBuilderPageState extends State<WorkoutBuilderPage> {
 
     final initialPlan = widget.initialPlan;
     _nameController.text =
-        initialPlan?.name ?? 'Workout ${DateTime.now().month}/${DateTime.now().day}';
+        initialPlan?.name ??
+            'Workout ${DateTime.now().month}/${DateTime.now().day}';
     _notesController.text = initialPlan?.notes ?? '';
 
     _exercises =
@@ -80,7 +81,7 @@ class _WorkoutBuilderPageState extends State<WorkoutBuilderPage> {
         _libraryExercises = data;
         _isLoadingLibrary = false;
       });
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
 
       setState(() {
@@ -268,7 +269,8 @@ class _WorkoutBuilderPageState extends State<WorkoutBuilderPage> {
 
   void _removeSet(int exerciseIndex, int setIndex) {
     final exercise = _exercises[exerciseIndex];
-    final updatedSets = List<WorkoutPlanSet>.from(exercise.sets)..removeAt(setIndex);
+    final updatedSets =
+    List<WorkoutPlanSet>.from(exercise.sets)..removeAt(setIndex);
 
     _updateExercise(
       exerciseIndex,
@@ -386,7 +388,8 @@ class _WorkoutBuilderPageState extends State<WorkoutBuilderPage> {
     isDarkMode ? const Color(0xFFA66CFF) : const Color(0xFFCFF500);
     final primaryCtaTextColor = isDarkMode ? Colors.white : Colors.black;
     final cardColor = isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
-    final outlineColor = isDarkMode
+    final outlineColor =
+    isDarkMode
         ? Colors.white.withValues(alpha: 0.16)
         : accentColor.withValues(alpha: 0.28);
 
@@ -400,9 +403,7 @@ class _WorkoutBuilderPageState extends State<WorkoutBuilderPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                _isTrainerTemplate
-                    ? 'Build Client Plan'
-                    : 'Build Your Workout',
+                _isTrainerTemplate ? 'Build Client Plan' : 'Build Your Workout',
                 style: Theme.of(context).textTheme.displaySmall?.copyWith(
                   fontWeight: FontWeight.w900,
                 ),
@@ -490,7 +491,8 @@ class _WorkoutBuilderPageState extends State<WorkoutBuilderPage> {
                   children: [
                     Expanded(
                       child: TextButton(
-                        onPressed: _isSaving
+                        onPressed:
+                        _isSaving
                             ? null
                             : () => _save(startAfterSave: !_isTrainerTemplate),
                         style: TextButton.styleFrom(
@@ -500,8 +502,8 @@ class _WorkoutBuilderPageState extends State<WorkoutBuilderPage> {
                         child: Text(
                           _isTrainerTemplate
                               ? (_isEditing
-                                  ? 'Update Client Plan'
-                                  : 'Save Client Plan')
+                              ? 'Update Client Plan'
+                              : 'Save Client Plan')
                               : 'Start Workout',
                           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.w900,
@@ -515,13 +517,15 @@ class _WorkoutBuilderPageState extends State<WorkoutBuilderPage> {
                       height: 76,
                       margin: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: isDarkMode
+                        color:
+                        isDarkMode
                             ? Colors.black.withValues(alpha: 0.24)
                             : Colors.black.withValues(alpha: 0.55),
                         shape: BoxShape.circle,
                       ),
                       child: IconButton(
-                        onPressed: _isSaving
+                        onPressed:
+                        _isSaving
                             ? null
                             : () => _save(startAfterSave: !_isTrainerTemplate),
                         color: Colors.white,
@@ -541,7 +545,8 @@ class _WorkoutBuilderPageState extends State<WorkoutBuilderPage> {
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   onPressed: _isSaving ? null : () => _save(startAfterSave: false),
-                  icon: _isSaving
+                  icon:
+                  _isSaving
                       ? const SizedBox(
                     width: 18,
                     height: 18,
@@ -551,21 +556,6 @@ class _WorkoutBuilderPageState extends State<WorkoutBuilderPage> {
                   label: Text(_isEditing ? 'Update Plan' : 'Save Plan'),
                 ),
               ),
-              if (!_isTrainerTemplate)
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: _isSaving ? null : () => _save(startAfterSave: false),
-                    icon: _isSaving
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.save_outlined),
-                    label: Text(_isEditing ? 'Update Plan' : 'Save Plan'),
-                  ),
-                ),
               const SizedBox(height: 18),
               Align(
                 alignment: Alignment.centerLeft,
@@ -623,9 +613,7 @@ class _WorkoutBuilderPageState extends State<WorkoutBuilderPage> {
                               Text(
                                 exercise.name,
                                 textAlign: TextAlign.center,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleMedium
+                                style: Theme.of(context).textTheme.titleMedium
                                     ?.copyWith(fontWeight: FontWeight.w700),
                               ),
                             ],
@@ -683,14 +671,13 @@ class _WorkoutBuilderCard extends StatelessWidget {
   final ValueChanged<int> onRemoveSet;
   final void Function(int setIndex, WorkoutPlanSet set) onUpdateSet;
 
-  InputDecoration _fieldDecoration({
-    required String hintText,
-  }) {
+  InputDecoration _fieldDecoration({required String hintText}) {
     return InputDecoration(
       hintText: hintText,
       isDense: true,
       filled: true,
-      fillColor: isDarkMode
+      fillColor:
+      isDarkMode
           ? Colors.white.withValues(alpha: 0.05)
           : accentColor.withValues(alpha: 0.08),
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -783,12 +770,14 @@ class _WorkoutBuilderCard extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.fromLTRB(14, 12, 8, 10),
                     decoration: BoxDecoration(
-                      color: isDarkMode
+                      color:
+                      isDarkMode
                           ? Colors.white.withValues(alpha: 0.025)
                           : accentColor.withValues(alpha: 0.035),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: isDarkMode
+                        color:
+                        isDarkMode
                             ? Colors.white.withValues(alpha: 0.06)
                             : accentColor.withValues(alpha: 0.12),
                       ),
@@ -837,7 +826,8 @@ class _WorkoutBuilderCard extends StatelessWidget {
                                 Icons.keyboard_arrow_down_rounded,
                                 color: secondaryTextColor,
                               ),
-                              items: variations
+                              items:
+                              variations
                                   .map(
                                     (variation) => DropdownMenuItem<String>(
                                   value: variation,
@@ -858,7 +848,8 @@ class _WorkoutBuilderCard extends StatelessWidget {
                             );
 
                             final deleteButton = IconButton(
-                              onPressed: exercise.sets.length == 1
+                              onPressed:
+                              exercise.sets.length == 1
                                   ? null
                                   : () => onRemoveSet(setIndex),
                               visualDensity: VisualDensity.compact,
