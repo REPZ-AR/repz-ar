@@ -58,64 +58,21 @@ jobs:
       - name: Run performance smoke tests
         run: flutter test test/performance/auth_gate_performance_test.dart test/performance/main_page_performance_test.dart
 
-  test-visual-goldens:
-    if: github.event_name == 'pull_request'
+  test-compatibility-smoke:
     runs-on: ubuntu-latest
-    continue-on-error: true
     defaults:
       run:
         working-directory: repz
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
       - name: Install dependencies
         run: flutter pub get
-      - name: Run visual smoke tests
-        run: flutter test test/performance/main_page_visual_smoke_test.dart
-      - name: Upload golden failures
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: golden-failures
-          path: repz/test/performance/failures
-          if-no-files-found: ignore
-
-  refresh-linux-goldens:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    defaults:
-      run:
-        working-directory: repz
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-      - name: Install dependencies
-        run: flutter pub get
-      - name: Update Linux goldens
-        run: flutter test --update-goldens test/performance/main_page_visual_smoke_test.dart
-      - name: Upload refreshed goldens
-        uses: actions/upload-artifact@v4
-        with:
-          name: refreshed-linux-goldens
-          path: repz/test/performance/goldens
-          if-no-files-found: error
-      - name: Commit refreshed goldens
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "test: refresh Linux goldens"
-          file_pattern: repz/test/performance/goldens/*.png
+      - name: Run compatibility smoke tests
+        run: flutter test test/compatibility
 
   build:
     if: always()
@@ -124,7 +81,7 @@ jobs:
       - analyze
       - test-core
       - test-performance-smoke
-      - test-visual-goldens
+      - test-compatibility-smoke
     steps:
       - name: Enforce required checks
         run: |
@@ -138,6 +95,10 @@ jobs:
           fi
           if [ "${{ needs.test-performance-smoke.result }}" != "success" ]; then
             echo "test-performance-smoke failed"
+            exit 1
+          fi
+          if [ "${{ needs.test-compatibility-smoke.result }}" != "success" ]; then
+            echo "test-compatibility-smoke failed"
             exit 1
           fi
           echo "Required CI checks passed."
