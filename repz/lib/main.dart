@@ -183,6 +183,13 @@ class AuthGate extends StatefulWidget {
   final AuthGateway? authGateway;
   final ProfileGateway? profileGateway;
   final WorkoutGateway? workoutGateway;
+  final Widget Function(
+    User user,
+    Profile? profile,
+    WorkoutGateway workoutGateway,
+    Future<void> Function()? onLogout,
+  )?
+  mainPageBuilder;
 
   const AuthGate({
     Key? key,
@@ -191,6 +198,7 @@ class AuthGate extends StatefulWidget {
     this.authGateway,
     this.profileGateway,
     this.workoutGateway,
+    this.mainPageBuilder,
   }) : super(key: key);
 
   @override
@@ -436,6 +444,16 @@ class _AuthGateState extends State<AuthGate> {
             (metadata?['full_name'] as String?) ??
             (metadata?['name'] as String?);
         final isCoach = _profile?.mode == ProfileMode.trainer;
+        final mainPageBuilder = widget.mainPageBuilder;
+        if (mainPageBuilder != null) {
+          return mainPageBuilder(
+            user,
+            _profile,
+            _workoutGateway,
+            _loading ? null : _signOut,
+          );
+        }
+
         return MainPage(
           isDarkMode: widget.isDarkMode,
           isCoach: isCoach,

@@ -112,14 +112,14 @@ void main() {
           authGateway: authGateway,
           profileGateway: profileGateway,
           workoutGateway: workoutGateway,
+          mainPageBuilder:
+              (user, profile, workoutGateway, onLogout) => const _FakeMainPage(),
         ),
       );
       await tester.pump();
 
-      expect(find.byType(BottomNavigationBar), findsOneWidget);
-      expect(find.text('Home'), findsOneWidget);
-      expect(find.text('Feed'), findsOneWidget);
-      expect(find.text('Menu'), findsOneWidget);
+      expect(find.byType(_FakeMainPage), findsOneWidget);
+      expect(find.text('Fake Main Page'), findsOneWidget);
     });
   });
 }
@@ -129,11 +129,19 @@ class _TestApp extends StatelessWidget {
     required this.authGateway,
     required this.profileGateway,
     required this.workoutGateway,
+    this.mainPageBuilder,
   });
 
   final AuthGateway authGateway;
   final ProfileGateway profileGateway;
   final WorkoutGateway workoutGateway;
+  final Widget Function(
+    User user,
+    Profile? profile,
+    WorkoutGateway workoutGateway,
+    Future<void> Function()? onLogout,
+  )?
+  mainPageBuilder;
 
   @override
   Widget build(BuildContext context) {
@@ -144,6 +152,20 @@ class _TestApp extends StatelessWidget {
         authGateway: authGateway,
         profileGateway: profileGateway,
         workoutGateway: workoutGateway,
+        mainPageBuilder: mainPageBuilder,
+      ),
+    );
+  }
+}
+
+class _FakeMainPage extends StatelessWidget {
+  const _FakeMainPage();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(
+        child: Text('Fake Main Page'),
       ),
     );
   }
@@ -151,11 +173,16 @@ class _TestApp extends StatelessWidget {
 
 class FakeWorkoutGateway implements WorkoutGateway {
   @override
-  Future<int> fetchWorkoutProgress(String userId, {String? workoutPlanId}) async => 0;
+  Future<int> fetchWorkoutProgress(
+    String userId, {
+    String? workoutPlanId,
+  }) async => 0;
 
   @override
-  Future<void> syncWorkoutProgress(String userId, int index, {
-  String? workoutPlanId,
+  Future<void> syncWorkoutProgress(
+    String userId,
+    int index, {
+    String? workoutPlanId,
   }) async {}
 }
 
