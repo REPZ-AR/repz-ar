@@ -8,14 +8,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'pose_detector_view.dart';
 
 class WorkoutPlanHelpers {
-  static List<Exercise> supportedExercisesForPlan(WorkoutPlan plan) {
-    final exercises = <Exercise>[];
+  static List<WorkoutCatalogExercise> supportedExercisesForPlan(WorkoutPlan plan) {
+    final exercises = <WorkoutCatalogExercise>[];
 
     for (final planExercise in plan.exercises) {
       final catalogExercise = WorkoutCatalog.byKey(planExercise.exerciseKey);
-      final runtimeExercise = catalogExercise?.toRuntimeExercise(planExercise);
-      if (runtimeExercise != null) {
-        exercises.add(runtimeExercise);
+      if (catalogExercise != null && catalogExercise.isSupportedForWorkoutFlow) {
+        exercises.add(catalogExercise);
       }
     }
 
@@ -23,14 +22,15 @@ class WorkoutPlanHelpers {
   }
 
   static Future<bool> startPlan(
-    BuildContext context,
-    WorkoutPlan plan,
-  ) async {
+      BuildContext context,
+      WorkoutPlan plan,
+      ) async {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final userId = Supabase.instance.client.auth.currentUser?.id;
     final workoutRepository = WorkoutRepository();
-    final exercises = supportedExercisesForPlan(plan);
-    if (exercises.isEmpty) {
+    final supportedCatalogExercises = supportedExercisesForPlan(plan);
+
+    if (supportedCatalogExercises.isEmpty) {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
@@ -44,32 +44,23 @@ class WorkoutPlanHelpers {
     }
 
     final initialIndex =
-        userId == null || plan.id == null
-            ? 0
-            : await workoutRepository.fetchWorkoutProgress(
-                userId,
-                workoutPlanId: plan.id,
-              );
-
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => PoseDetectorView(
-          exercises: exercises,
-          initialIndex: initialIndex,
-          onProgressSaved:
-              userId == null || plan.id == null
-                  ? null
-                  : (savedIndex) async {
-                      await workoutRepository.syncWorkoutProgress(
-                        userId,
-                        savedIndex,
-                        workoutPlanId: plan.id,
-                      );
-                    },
-          isDarkMode: isDarkMode,
-        ),
-      ),
+    userId == null || plan.id == null
+        ? 0
+        : await workoutRepository.fetchWorkoutProgress(
+      userId,
+      workoutPlanId: plan.id,
     );
-    return true;
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Plan launch is being migrated to Supabase exercise data. Start workouts from the DB-backed exercise flow for now.',
+          ),
+        ),
+      );
+
+    return false;
   }
 }
