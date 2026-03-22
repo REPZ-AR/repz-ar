@@ -7,6 +7,22 @@ class ProfileRepository {
   ProfileRepository({SupabaseClient? client})
     : _client = client ?? Supabase.instance.client;
 
+  Future<void> _syncUsersInfoRole(String userId, ProfileMode mode) async {
+    final currentUser = _client.auth.currentUser;
+    final metadata = currentUser?.id == userId ? currentUser?.userMetadata : null;
+    final fullName =
+        (metadata?['full_name'] as String?) ?? (metadata?['name'] as String?);
+    final avatarUrl = metadata?['avatar_url'] as String?;
+
+    await _client.from('users_info').upsert({
+      'user_id': userId,
+      'role': mode == ProfileMode.trainer ? 'trainer' : 'user',
+      'full_name': fullName,
+      'avatar_url': avatarUrl,
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    }, onConflict: 'user_id');
+  }
+
   /// Fetches the full profile row for [userId].
   /// Returns `null` when no row exists yet.
   Future<Profile?> fetchProfile(String userId) async {
@@ -23,6 +39,8 @@ class ProfileRepository {
 
   /// Persists [mode] for [userId] and returns the updated profile.
   Future<Profile> saveMode(String userId, ProfileMode mode) async {
+    await _syncUsersInfoRole(userId, mode);
+
     final row =
         await _client
             .from('profile')
