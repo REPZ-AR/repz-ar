@@ -31,15 +31,18 @@ dependencies:
   flutter:
     sdk: flutter
   camera: ^0.11.0
-  google_mlkit_pose_detection: 0.14.0
-  google_mlkit_object_detection: 0.15.0
+  google_mlkit_pose_detection: 0.14.1
+  google_mlkit_object_detection: 0.15.1
   image_picker: ^1.2.0
   path: ^1.9.1
+  image: ^4.1.0
+  tflite_flutter: ^0.11.0
   path_provider: ^2.1.5
-  google_mlkit_commons: any
+  google_mlkit_commons: ^0.11.1
   supabase_flutter: ^2.7.0
   google_sign_in: ^6.3.0
   wakelock_plus: ^1.2.8
+  google_mlkit_image_labeling: 0.14.2
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -71,8 +74,10 @@ flutter:
 
   assets:
     - ./assets/data/
-    - ./assets/ml/gym_equipment_classifier.tflite
+    - ./assets/data/baseline_curls.json
+    - ./assets/ml/gym_equipment_model.tflite
     - ./assets/images/login_bg.png
+    - ./assets/labels.txt
     - ./assets/images/mode_picker_bg.png
     - ./assets/images/google_icon.png
     - ./assets/images/client_ui_image.png
