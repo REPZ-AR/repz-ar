@@ -63,19 +63,26 @@ class _MainPageState extends State<MainPage>
 
   void _buildPages() {
     _pages = {
-      0: HomePage(isDarkMode: widget.isDarkMode, avatarUrl: widget.avatarUrl, userId: widget.userId, workoutGateway: widget.workoutGateway),
+      0: HomePage(
+          isDarkMode: widget.isDarkMode,
+          avatarUrl: widget.avatarUrl,
+          userId: widget.userId,
+          workoutGateway: widget.workoutGateway),
       1: widget.isCoach
-          ? ClientManagementPage(isDarkMode: widget.isDarkMode)
+          ? ClientManagementPage(
+        isDarkMode: widget.isDarkMode,
+        onBack: () => setState(() => _selectedIndex = 0),
+      )
           : TrainerManagementPage(isDarkMode: widget.isDarkMode),
       3: FeedPage(isDarkMode: widget.isDarkMode),
       4: MenuPage(
-          isDarkMode: widget.isDarkMode,
-          avatarUrl: widget.avatarUrl,
-          userName: widget.userName,
-          userEmail: widget.userEmail,
-          onLogout: widget.onLogout,
-          onThemeChanged: widget.onThemeChanged,
-        ),
+        isDarkMode: widget.isDarkMode,
+        avatarUrl: widget.avatarUrl,
+        userName: widget.userName,
+        userEmail: widget.userEmail,
+        onLogout: widget.onLogout,
+        onThemeChanged: widget.onThemeChanged,
+      ),
     };
   }
 
@@ -152,7 +159,7 @@ class _MainPageState extends State<MainPage>
   @override
   Widget build(BuildContext context) {
     final accentColor =
-        widget.isDarkMode ? const Color(0xFFCFF500) : const Color(0xFFA66CFF);
+    widget.isDarkMode ? const Color(0xFFCFF500) : const Color(0xFFA66CFF);
     final labelColor = widget.isDarkMode ? Colors.white70 : Colors.black87;
 
     return Stack(
@@ -176,9 +183,7 @@ class _MainPageState extends State<MainPage>
                       : Icons.fitness_center_outlined,
                 ),
                 activeIcon: Icon(
-                  widget.isCoach
-                      ? Icons.group
-                      : Icons.fitness_center,
+                  widget.isCoach ? Icons.group : Icons.fitness_center,
                   color: accentColor,
                 ),
                 label: widget.isCoach ? 'Clients' : 'Trainers',
@@ -289,12 +294,12 @@ class _MainPageState extends State<MainPage>
           border: Border.all(color: accentColor, width: 4),
           boxShadow: isOpen
               ? [
-                  BoxShadow(
-                    color: accentColor.withValues(alpha: 0.28),
-                    blurRadius: 18,
-                    spreadRadius: 2,
-                  ),
-                ]
+            BoxShadow(
+              color: accentColor.withValues(alpha: 0.28),
+              blurRadius: 18,
+              spreadRadius: 2,
+            ),
+          ]
               : null,
         ),
         child: Container(
