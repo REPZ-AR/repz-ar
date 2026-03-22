@@ -56,7 +56,7 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
       - name: Run performance smoke tests
-        run: flutter test test/performance/auth_gate_performance_test.dart test/performance/main_page_performance_test.dart
+        run: flutter test test/performance/auth_gate_performance_test.dart test/performance/entry_flow_performance_test.dart test/performance/main_page_performance_test.dart
 
   test-compatibility-smoke:
     runs-on: ubuntu-latest
