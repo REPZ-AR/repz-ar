@@ -4,8 +4,11 @@ on:
     branches: [ "master" ]
   pull_request:
     branches: [ "master" ]
+concurrency:
+  group: flutter-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
-  build:
+  analyze:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -15,9 +18,65 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true
       - name: Install dependencies
         run: flutter pub get
       - name: Analyze project source
         run: flutter analyze --no-fatal-warnings --no-fatal-infos
-      - name: Run tests
-        run: flutter test
+
+  test-core:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: repz
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Run auth gate test
+        run: flutter test test/main_auth_gate_test.dart
+      - name: Run utility tests
+        run: flutter test test/views/utils
+
+  test-performance-smoke:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: repz
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Run performance smoke tests
+        run: flutter test test/performance/auth_gate_performance_test.dart test/performance/main_page_performance_test.dart
+
+  test-visual-goldens:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: repz
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Run visual smoke tests
+        run: flutter test test/performance/main_page_visual_smoke_test.dart
+      - name: Upload golden failures
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-failures
+          path: repz/test/performance/failures
+          if-no-files-found: ignore
