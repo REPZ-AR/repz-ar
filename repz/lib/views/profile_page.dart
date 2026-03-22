@@ -9,6 +9,7 @@ import '../widgets/layouts/badges_card.dart';
 
 class ProfilePage extends StatefulWidget {
   final bool isDarkMode;
+  final bool isCoach;
   final String? avatarUrl;
   final String? userName;
   final String? userEmail;
@@ -18,6 +19,7 @@ class ProfilePage extends StatefulWidget {
   const ProfilePage({
     super.key,
     required this.isDarkMode,
+    required this.isCoach,
     this.avatarUrl,
     this.userName,
     this.userEmail,
@@ -187,7 +189,10 @@ class _ProfilePageState extends State<ProfilePage> {
               badges: _badges,
             ),
             const SizedBox(height: 12),
-            MenuCard(isDarkMode: widget.isDarkMode),
+            MenuCard(
+              isDarkMode: widget.isDarkMode,
+              isCoach: widget.isCoach,
+            ),
           ],
         ),
       ),

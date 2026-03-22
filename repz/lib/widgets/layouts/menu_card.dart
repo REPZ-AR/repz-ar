@@ -2,11 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:repz/views/prebuilt_workout_plans_page.dart';
 import 'package:repz/views/saved_workout_plans_page.dart';
 import 'package:repz/views/weekly_schedule_page.dart';
+import 'package:repz/views/trainer_plan_library_page.dart';
 
 class MenuCard extends StatelessWidget {
   final bool isDarkMode;
+  final bool isCoach;
 
-  const MenuCard({super.key, required this.isDarkMode});
+  const MenuCard({
+    super.key,
+    required this.isDarkMode,
+    required this.isCoach,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -22,36 +28,51 @@ class MenuCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _MenuItem(
-            icon: Icons.playlist_play_rounded,
-            iconColor: iconColor,
-            iconBg: accentColor.withValues(alpha: 0.18),
-            title: 'Saved Plans',
-            subtitle: 'Open, edit, and start your saved workout plans',
-            onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const SavedWorkoutPlansPage())),
-            showDivider: true,
-          ),
-          _MenuItem(
-            icon: Icons.calendar_today_outlined,
-            iconColor: iconColor,
-            iconBg: accentColor.withValues(alpha: 0.18),
-            title: 'Weekly Schedule',
-            subtitle: 'Set which plan you want to follow on each weekday',
-            onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const WeeklySchedulePage())),
-            showDivider: true,
-          ),
-          _MenuItem(
-            icon: Icons.auto_awesome_outlined,
-            iconColor: iconColor,
-            iconBg: accentColor.withValues(alpha: 0.18),
-            title: 'Pre-built Plans',
-            subtitle: 'Browse curated plans and copy them into your routine',
-            onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const PrebuiltWorkoutPlansPage())),
-            showDivider: false,
-          ),
+          if (!isCoach) ...[
+            _MenuItem(
+              icon: Icons.playlist_play_rounded,
+              iconColor: iconColor,
+              iconBg: accentColor.withValues(alpha: 0.18),
+              title: 'Saved Plans',
+              subtitle: 'Open, edit, and start your saved workout plans',
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => const SavedWorkoutPlansPage())),
+              showDivider: true,
+            ),
+            _MenuItem(
+              icon: Icons.calendar_today_outlined,
+              iconColor: iconColor,
+              iconBg: accentColor.withValues(alpha: 0.18),
+              title: 'Weekly Schedule',
+              subtitle: 'Set which schedule profile you want to actively follow',
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => const WeeklySchedulePage())),
+              showDivider: true,
+            ),
+            _MenuItem(
+              icon: Icons.auto_awesome_outlined,
+              iconColor: iconColor,
+              iconBg: accentColor.withValues(alpha: 0.18),
+              title: 'Pre-built Plans',
+              subtitle: 'Browse curated plans and copy them into your routine',
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => const PrebuiltWorkoutPlansPage())),
+              showDivider: false,
+            ),
+          ] else ...[
+            _MenuItem(
+              icon: Icons.assignment_rounded,
+              iconColor: iconColor,
+              iconBg: accentColor.withValues(alpha: 0.18),
+              title: 'Client Plan Library',
+              subtitle: 'Create reusable client plans and assign them to clients',
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => TrainerPlanLibraryPage(
+                    isDarkMode: isDarkMode,
+                  ))),
+              showDivider: false,
+            ),
+          ],
         ],
       ),
     );
@@ -86,7 +107,8 @@ class _MenuItem extends StatelessWidget {
             backgroundColor: iconBg,
             child: Icon(icon, color: iconColor),
           ),
-          title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+          title: Text(title,
+              style: const TextStyle(fontWeight: FontWeight.w700)),
           subtitle: Text(subtitle),
           trailing: const Icon(Icons.chevron_right_rounded),
           onTap: onTap,
