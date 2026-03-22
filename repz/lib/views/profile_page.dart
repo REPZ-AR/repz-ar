@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../model/repz_badge.dart';
 import '../widgets/layouts/friends_card.dart';
@@ -56,68 +57,41 @@ class _ProfilePageState extends State<ProfilePage> {
     Color(0xFF72243E),
   ];
 
-  final List<RepzBadge> _badges = const [
-    RepzBadge(
-      month: 'October',
-      label: 'On Fire',
-      description: 'You crushed every session in October. The grind was real.',
-      earned: true,
-      icon: Icons.local_fire_department_rounded,
-      bgColor: Color(0xFFFAEEDA),
-      borderColor: Color(0xFFEF9F27),
-      iconColor: Color(0xFF854F0B),
-    ),
-    RepzBadge(
-      month: 'November',
-      label: 'Consistent',
-      description: 'Not a single week skipped in November. Respect.',
-      earned: true,
-      icon: Icons.verified_rounded,
-      bgColor: Color(0xFFE1F5EE),
-      borderColor: Color(0xFF5DCAA5),
-      iconColor: Color(0xFF085041),
-    ),
-    RepzBadge(
-      month: 'December',
-      label: 'Dedicated',
-      description: 'You stayed disciplined through the holiday chaos. Legend.',
-      earned: true,
-      icon: Icons.military_tech_rounded,
-      bgColor: Color(0xFFEEEDFE),
-      borderColor: Color(0xFFAFA9EC),
-      iconColor: Color(0xFF3C3489),
-    ),
-    RepzBadge(
-      month: 'January',
-      label: 'New Year',
-      description: 'Started 2025 strong. New year, same beast.',
-      earned: true,
-      icon: Icons.celebration_rounded,
-      bgColor: Color(0xFFFBEAF0),
-      borderColor: Color(0xFFED93B1),
-      iconColor: Color(0xFF72243E),
-    ),
-    RepzBadge(
-      month: 'February',
-      label: 'Grinder',
-      description: 'Short month, zero excuses. You showed up every day.',
-      earned: true,
-      icon: Icons.bolt_rounded,
-      bgColor: Color(0xFFE6F1FB),
-      borderColor: Color(0xFF85B7EB),
-      iconColor: Color(0xFF0C447C),
-    ),
-    RepzBadge(
-      month: 'March',
-      label: 'Locked',
-      description: 'Keep your streak going to unlock this badge.',
-      earned: false,
-      icon: Icons.lock_rounded,
-      bgColor: Color(0xFFF1EFE8),
-      borderColor: Color(0xFFB4B2A9),
-      iconColor: Color(0xFF888780),
-    ),
-  ];
+  List<RepzBadge> _badges = [];
+  bool _badgesLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchBadges();
+  }
+
+  Future<void> _fetchBadges() async {
+    try {
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId == null) {
+        setState(() => _badgesLoading = false);
+        return;
+      }
+
+      final response = await Supabase.instance.client
+          .from('badges')
+          .select()
+          .eq('user_id', userId)
+          .order('created_at');
+
+      if (mounted) {
+        setState(() {
+          _badges = (response as List)
+              .map((row) => RepzBadge.fromMap(row as Map<String, dynamic>))
+              .toList();
+          _badgesLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _badgesLoading = false);
+    }
+  }
 
   Future<void> _confirmLogout() async {
     if (widget.onLogout == null) return;
@@ -184,10 +158,13 @@ class _ProfilePageState extends State<ProfilePage> {
               },
             ),
             const SizedBox(height: 12),
-            BadgesCard(
-              isDarkMode: widget.isDarkMode,
-              badges: _badges,
-            ),
+            if (_badgesLoading)
+              _BadgesShimmer(isDarkMode: widget.isDarkMode)
+            else if (_badges.isNotEmpty)
+              BadgesCard(
+                isDarkMode: widget.isDarkMode,
+                badges: _badges,
+              ),
             const SizedBox(height: 12),
             MenuCard(
               isDarkMode: widget.isDarkMode,
@@ -195,6 +172,71 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _BadgesShimmer extends StatelessWidget {
+  final bool isDarkMode;
+
+  const _BadgesShimmer({required this.isDarkMode});
+
+  @override
+  Widget build(BuildContext context) {
+    final cardColor = isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
+    final shimmerColor = isDarkMode
+        ? Colors.white.withValues(alpha: 0.06)
+        : Colors.black.withValues(alpha: 0.06);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 60,
+            height: 12,
+            decoration: BoxDecoration(
+              color: shimmerColor,
+              borderRadius: BorderRadius.circular(6),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: List.generate(
+              5,
+                  (i) => Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: shimmerColor,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Container(
+                      width: 40,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: shimmerColor,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
