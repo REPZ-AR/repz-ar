@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:repz/config/app_config.dart';
 import 'package:repz/model/profile.dart';
 import 'package:repz/repositories/auth_repository.dart';
@@ -126,6 +127,7 @@ class WorkoutRepositoryGateway implements WorkoutGateway {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   AppConfig.validate();
+  FlutterNativeSplash.preserve(widgetsBinding: WidgetsBinding.instance);
 
   await Supabase.initialize(
     url: AppConfig.supabaseUrl,
@@ -135,6 +137,7 @@ Future<void> main() async {
     ),
   );
 
+  FlutterNativeSplash.remove();
   runApp(const MyApp());
 }
 

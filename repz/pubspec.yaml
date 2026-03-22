@@ -42,7 +42,8 @@ dependencies:
   supabase_flutter: ^2.7.0
   google_sign_in: ^6.3.0
   wakelock_plus: ^1.2.8
-  google_mlkit_image_labeling: 0.14.2
+  url_launcher: ^6.3.1
+  flutter_native_splash: ^2.4.7
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -81,6 +82,7 @@ flutter:
     - ./assets/images/mode_picker_bg.png
     - ./assets/images/google_icon.png
     - ./assets/images/client_ui_image.png
+    - ./assets/icons/repz-dark.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:
@@ -103,11 +105,22 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/icons/repz-dark.png"
+  image_path: "assets/icons/repz.ico"
+  min_sdk_android: 21
+  adaptive_icon_background: "#000000"
+  adaptive_icon_foreground: "assets/icons/repz-foreground.png"
 
 flutter_native_splash:
-  color: "#ffffff"
-  background_image: "assets/icons/repz-dark.png"
+  color: "#FFFFFF"                          # background color
+  image: "assets/icons/repz-dark-square.png"     # optional centered image
+  color_dark: "#000000"                    # dark mode bg
+  image_dark: "assets/icons/repz-light-square.png"
+
+  android_12:
+    color: "#FFFFFF"                          # background color
+    image: "assets/icons/repz-dark-square.png"     # optional centered image
+    color_dark: "#000000"                    # dark mode bg
+    image_dark: "assets/icons/repz-light-square.png"
   fullscreen: true
   android: true
   ios: true
