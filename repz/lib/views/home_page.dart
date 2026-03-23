@@ -1,3 +1,17 @@
+/// HomePage is the main dashboard screen of the application.
+///
+/// Responsibilities:
+/// - Displays user greeting, stats, and profile summary
+/// - Shows today's workout plan or recommended plan
+/// - Tracks calorie progress and allows goal editing
+/// - Displays connected trainers
+/// - Provides navigation to workout plans and schedule
+///
+/// This screen integrates multiple services:
+/// - WorkoutPlanRepository (plans & scheduling)
+/// - ProfileService (user body stats)
+/// - TrainerService (trainer connections)
+
 import 'package:flutter/material.dart';
 import 'package:repz/main.dart';
 import 'package:repz/model/profile_data.dart';

@@ -1,3 +1,33 @@
+/// Trainer Management Module
+///
+/// This file implements the Trainer Management feature of the application,
+/// allowing users to view, search, add, and remove trainer connections.
+///
+/// Key Features:
+/// - Displays a list of currently connected trainers
+/// - Provides real-time search and filtering functionality
+/// - Allows users to add new trainers via a bottom sheet interface
+/// - Supports removing existing trainer connections
+/// - Includes pull-to-refresh for updating trainer data
+///
+/// UI Highlights:
+/// - Modern layered UI with background image and overlay
+/// - Expandable trainer cards for detailed interaction
+/// - Floating stats strip summarizing trainer data
+/// - Responsive design supporting both dark and light modes
+///
+/// Architecture & Integration:
+/// - Uses TrainerService for all backend interactions
+/// - Follows a stateful widget approach for dynamic UI updates
+/// - Separates reusable UI components (e.g., TrainerCard, tiles)
+///
+/// Error Handling:
+/// - Gracefully handles loading states and empty states
+/// - Displays feedback using SnackBars for failed operations
+///
+/// This module plays a key role in managing user–trainer relationships
+/// within the fitness application, enhancing personalization and guidance.
+
 import 'package:flutter/material.dart';
 import '../model/trainer.dart';
 import '../services/trainer_service.dart';
